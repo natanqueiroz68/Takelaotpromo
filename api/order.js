@@ -82,7 +82,7 @@ async function getLatestOrder() {
 
 function renderOrderPlainText(order) {
   const d = new Date(order.received_date || Date.now());
-  const del = new Date(order.delivery_date || (validCreatedTime + 8 * 86400000));
+  const del = new Date(order.delivery_date || (Date.now() + 8 * 86400000));
 
   const daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -153,7 +153,7 @@ async function ensureEmailSent(order, force = false) {
   try {
     const template = fs.readFileSync(path.join(process.cwd(), 'email.index'), 'utf8');
     const d = new Date(order.received_date || Date.now());
-    const del = new Date(order.delivery_date || (validCreatedTime + 8 * 86400000));
+    const del = new Date(order.delivery_date || (Date.now() + 8 * 86400000));
     const daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const daysLong = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
