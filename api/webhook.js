@@ -7,7 +7,7 @@
 //   UPSTASH_REDIS_REST_TOKEN  Upstash REST token
 //   WEBHOOK_SECRET            signing secret from paw-house.shop webhook settings
 //   PRODUCT_IMAGE_DEFAULT     fallback product image URL
-//   PRODUCT_IMAGE_DM_FWYYAOOHEE   image URL for the Hisense washing machine product
+//   PRODUCT_IMAGE_DM_FWYYAOOHEE   image URL for the Hisense fridge product
 //
 // Paw House sends:  X-Paw-House-Signature: <hmac-sha256-hex>
 // Signature is computed by Paw House as:  HMAC-SHA256(rawBody, signingSecret)
@@ -181,7 +181,7 @@ function renderOrderPlainText(order) {
     `- Delivery Method: Courier`,
     ``,
     `ITEMS IN THIS ORDER:`,
-    `- 1x Hisense 14kg Top Loader Washing Machine - R 999.00`,
+    `- 1x Hisense 263L Bottom Freezer Fridge with Water Dispenser - Black Glass - R 999.00`,
     ``,
     `PAYMENT SUMMARY:`,
     `- Subtotal: R 999.00`,
@@ -500,7 +500,7 @@ async function handler(req, res) {
   const productName  = item.title || item.name || item.productName || item.product_title
                     || (payload.product && payload.product.name)
                     || payload.productTitle || payload.product_title
-                    || 'Hisense 14kg Top Loader Washing Machine';
+                    || 'Hisense 263L Bottom Freezer Fridge with Water Dispenser - Black Glass';
   const productPrice = item.totalPrice != null
                     ? item.totalPrice
                     : (item.price != null ? item.price : (payload.amount != null ? payload.amount : 999));
