@@ -28,7 +28,7 @@
       "@type": "Offer",
       "itemOffered": {
         "@type": "Product",
-        "name": "JBL PartyBox 520 Portable Battery-Powered Party Speaker - Black"
+        "name": "JBL PartyBox 520 Portable Battery-Powered Party Speaker - Black With 2 JBL Wireless Microphones"
       },
       "price": "799.00",
       "priceCurrency": "ZAR",
@@ -408,7 +408,7 @@
                     <table role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="#ffffff" style="background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 4px;">
                       <tr>
                         <td align="center" valign="middle" style="width: 60px; height: 60px; padding: 2px;">
-                          <img src="https://takeasealotsa.vercel.app/images/jbl-partybox-520-main.png" alt="JBL PartyBox 520 Portable Battery-Powered Party Speaker - Black" width="56" height="56" border="0" style="display: block; width: 56px; height: 56px; object-fit: contain;" />
+                          <img src="https://takeasealotsa.vercel.app/images/jbl-partybox-520-main.png" alt="JBL PartyBox 520 Portable Battery-Powered Party Speaker - Black With 2 JBL Wireless Microphones" width="56" height="56" border="0" style="display: block; width: 56px; height: 56px; object-fit: contain;" />
                         </td>
                       </tr>
                     </table>
@@ -416,7 +416,7 @@
                   <!-- Product Name & Variant -->
                   <td valign="top" style="padding-left: 14px; padding-right: 10px;">
                     <a href="https://takeasealotsa.vercel.app/track.html?order={{order_number}}" target="_blank" class="email-product-title" style="font-family: Arial, Helvetica, sans-serif; font-size: 14px; font-weight: bold; color: #0b79bf; text-decoration: underline; line-height: 1.45;">
-                      JBL PartyBox 520 Portable Battery-Powered Party Speaker - Black
+                      JBL PartyBox 520 Portable Battery-Powered Party Speaker - Black With 2 JBL Wireless Microphones
                     </a>
                     <div class="email-product-sub" style="font-family: Arial, Helvetica, sans-serif; font-size: 13px; color: #6b7280; margin-top: 5px;">
                       Black &middot; Model PartyBox 520 &nbsp;|&nbsp; Qty: 1
