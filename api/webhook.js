@@ -7,7 +7,7 @@
 //   UPSTASH_REDIS_REST_TOKEN  Upstash REST token
 //   WEBHOOK_SECRET            signing secret from paw-house.shop webhook settings
 //   PRODUCT_IMAGE_DEFAULT     fallback product image URL
-//   PRODUCT_IMAGE_DM_FWYYAOOHEE   image URL for the Hisense fridge product
+//   PRODUCT_IMAGE_DM_FWYYAOOHEE   image URL for the JBL PartyBox 520 product
 //
 // Paw House sends:  X-Paw-House-Signature: <hmac-sha256-hex>
 // Signature is computed by Paw House as:  HMAC-SHA256(rawBody, signingSecret)
@@ -181,12 +181,12 @@ function renderOrderPlainText(order) {
     `- Delivery Method: Courier`,
     ``,
     `ITEMS IN THIS ORDER:`,
-    `- 1x Hisense 263L Bottom Freezer Fridge with Water Dispenser - Black Glass - R 999.00`,
+    `- 1x JBL PartyBox 520 Portable Battery-Powered Party Speaker - Black - R 799.00`,
     ``,
     `PAYMENT SUMMARY:`,
-    `- Subtotal: R 999.00`,
+    `- Subtotal: R 799.00`,
     `- Shipping: Free`,
-    `- Total Paid: R 999.00`,
+    `- Total Paid: R 799.00`,
     ``,
     `TRACK YOUR ORDER:`,
     `${trackUrl}`,
@@ -500,10 +500,10 @@ async function handler(req, res) {
   const productName  = item.title || item.name || item.productName || item.product_title
                     || (payload.product && payload.product.name)
                     || payload.productTitle || payload.product_title
-                    || 'Hisense 263L Bottom Freezer Fridge with Water Dispenser - Black Glass';
+                    || 'JBL PartyBox 520 Portable Battery-Powered Party Speaker - Black';
   const productPrice = item.totalPrice != null
                     ? item.totalPrice
-                    : (item.price != null ? item.price : (payload.amount != null ? payload.amount : 999));
+                    : (item.price != null ? item.price : (payload.amount != null ? payload.amount : 799));
   const currency     = item.currency || payload.currency || 'ZAR';
 
   // Product image: per-product env var or default
