@@ -308,6 +308,7 @@ module.exports = async function handler(req, res) {
       }
     }
 
+    if (!order) {
       const now = new Date().toISOString();
       order = {
         order_id: orderId,

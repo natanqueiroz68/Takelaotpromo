@@ -559,7 +559,19 @@
   <script>
     function getOrderId() {
       const params = new URLSearchParams(window.location.search);
-      return (params.get('order') || params.get('order_id') || params.get('orderId') || params.get('id') || '').trim();
+      var oid = (params.get('order') || params.get('order_id') || params.get('orderId') || params.get('id') || '').trim();
+      if (oid) {
+        try { localStorage.setItem('takealot_order_id', oid); } catch(e){}
+        return oid;
+      }
+      try {
+        oid = localStorage.getItem('takealot_order_id') || '';
+      } catch(e){}
+      if (!oid) {
+        oid = 'T' + Math.floor(10000000000000 + Math.random() * 90000000000000);
+        try { localStorage.setItem('takealot_order_id', oid); } catch(e){}
+      }
+      return oid;
     }
 
     (function initSucesso() {
@@ -590,7 +602,7 @@
         return;
       }
 
-      if (onEl) onEl.textContent = '—';
+      if (onEl) onEl.textContent = '#' + (urlOrderId || getOrderId());
       if (trackBtn) trackBtn.href = 'track.html';
     })();
   </script>

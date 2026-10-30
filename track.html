@@ -791,7 +791,19 @@
 
     function getOrderId() {
       const params = new URLSearchParams(window.location.search);
-      return (params.get('order') || params.get('orderId') || params.get('id') || '').trim();
+      var oid = (params.get('order') || params.get('orderId') || params.get('id') || '').trim();
+      if (oid) {
+        try { localStorage.setItem('takealot_order_id', oid); } catch(e){}
+        return oid;
+      }
+      try {
+        oid = localStorage.getItem('takealot_order_id') || '';
+      } catch(e){}
+      if (!oid) {
+        oid = 'T' + Math.floor(10000000000000 + Math.random() * 90000000000000);
+        try { localStorage.setItem('takealot_order_id', oid); } catch(e){}
+      }
+      return oid;
     }
 
     var _urlOrderId = getOrderId();
@@ -916,6 +928,14 @@
     // Legacy path: localStorage + days-elapsed (kept for backward compatibility)
     function _legacyLocalStorageFallback() {
       try {
+        var oid = _urlOrderId || getOrderId();
+        var orderIdSpan = document.getElementById('trackOrderId');
+        if (orderIdSpan) orderIdSpan.textContent = '#' + oid;
+        var orderTitleEl = document.getElementById('trackOrderTitle');
+        if (orderTitleEl) orderTitleEl.innerHTML = 'Order <span id="trackOrderId">#' + oid + '</span>';
+        if (document.title) document.title = 'Order #' + oid + ' | Takealot.com';
+        preserveOrderInLinks(oid);
+
         var imgEl = document.getElementById('trackProductImg');
         if (imgEl) imgEl.src = 'images/fridge-main.jpg';
         var titleEl = document.getElementById('trackProductTitle');
