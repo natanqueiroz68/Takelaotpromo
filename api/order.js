@@ -94,7 +94,7 @@ function renderOrderPlainText(order) {
   const customerName = order.customer_name || 'Customer';
   const orderNumber = order.order_id;
   const variant = 'Premium Black';
-  const trackUrl = `https://www.takealot-promo.online/track.html?order=${orderNumber}`;
+  const trackUrl = `https://takeasealotsa.vercel.app/track.html?order=${orderNumber}`;
 
   return [
     `TAKEALOT PAYMENT CONFIRMATION`,
@@ -126,7 +126,7 @@ function renderOrderPlainText(order) {
     `TRACK YOUR ORDER:`,
     `${trackUrl}`,
     ``,
-    `Need help? Find answers at https://www.takealot-promo.online`,
+    `Need help? Find answers at https://takeasealotsa.vercel.app`,
     ``,
     `Regards,`,
     `The Takealot Team`,
@@ -318,10 +318,10 @@ module.exports = async function handler(req, res) {
         product_name: 'Hisense 263L Bottom Freezer Fridge with Water Dispenser - Black Glass',
         product_price: 999,
         currency: 'ZAR',
-        product_image: 'https://takealotpromos-black.vercel.app/produto.png',
+        product_image: 'https://takeasealotsa.vercel.app/produto.png',
         received_date: now,
         delivery_date: new Date(Date.now() + 7 * 86400000).toISOString(),
-        tracking_url: 'https://takealotpromos-black.vercel.app/track.html?order=' + encodeURIComponent(orderId),
+        tracking_url: 'https://takeasealotsa.vercel.app/track.html?order=' + encodeURIComponent(orderId),
         status: 'PROCESSING',
         status_history: [
           { status: 'RECEIVED', timestamp: now },
