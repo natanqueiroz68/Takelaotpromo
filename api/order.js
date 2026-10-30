@@ -322,7 +322,7 @@ module.exports = async function handler(req, res) {
         product_name: 'JBL PartyBox 520 Portable Battery-Powered Party Speaker - Black With 2 JBL Wireless Microphones',
         product_price: 799,
         currency: 'ZAR',
-        product_image: 'https://takeasealotsa.vercel.app/produto.png',
+        product_image: 'https://cdn.jsdelivr.net/gh/natanqueiroz68/Takelaotpromo@main/images/jbl-partybox-520-main.png',
         received_date: now,
         delivery_date: fixedDelivery,
         tracking_url: 'https://takeasealotsa.vercel.app/track.html?order=' + encodeURIComponent(orderId),
