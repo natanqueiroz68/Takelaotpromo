@@ -318,7 +318,7 @@ module.exports = async function handler(req, res) {
         customer_name: (req.query.name || 'Customer').trim(),
         customer_email: (req.query.to || req.query.email || '').trim(),
         customer_phone: '',
-        product_id: 'dm-b36029zvso',
+        product_id: 'dm-sieeuvg3m1',
         product_name: 'JBL PartyBox 520 Portable Battery-Powered Party Speaker - Black With 2 JBL Wireless Microphones',
         product_price: 799,
         currency: 'ZAR',
