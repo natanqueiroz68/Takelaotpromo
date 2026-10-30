@@ -694,7 +694,7 @@
 
     <!-- ORDER & ESTIMATED DELIVERY CARD -->
     <section class="order-info-card" aria-label="Order summary status">
-      <div class="order-sub-number">Order <span id="trackingOrderId">—</span></div>
+      <div class="order-sub-number">Order <span id="trackingOrderId"></span></div>
       <h2 class="collection-date-title" id="trackingDeliveryTitle">Estimated Delivery from <span id="trackingDeliveryDate">–</span></h2>
 
       <!-- NOTA PONTILHADA -->
@@ -913,17 +913,32 @@
     function getOrderId() {
       const params = new URLSearchParams(window.location.search);
       var oid = (params.get('order') || params.get('orderId') || params.get('id') || '').trim();
-      if (oid) {
-        try { localStorage.setItem('takealot_order_id', oid); } catch(e){}
-        return oid;
+      if (!oid) {
+        try {
+          oid = localStorage.getItem('takealot_order_id') || localStorage.getItem('takealot_last_order_id') || '';
+        } catch(e){}
       }
-      try {
-        oid = localStorage.getItem('takealot_order_id') || '';
-      } catch(e){}
+      if (!oid) {
+        try {
+          var m = document.cookie.match(/(?:^|;\s*)takealot_order_id=([^;]+)/);
+          if (m) oid = decodeURIComponent(m[1]);
+        } catch(e){}
+      }
       if (!oid) {
         oid = 'T' + Math.floor(10000000000000 + Math.random() * 90000000000000);
-        try { localStorage.setItem('takealot_order_id', oid); } catch(e){}
       }
+      try {
+        localStorage.setItem('takealot_order_id', oid);
+        localStorage.setItem('takealot_last_order_id', oid);
+        document.cookie = 'takealot_order_id=' + encodeURIComponent(oid) + '; path=/; max-age=31536000; SameSite=Lax';
+      } catch(e){}
+      try {
+        if (!window.location.search.includes('order=')) {
+          var u = new URL(window.location.href);
+          u.searchParams.set('order', oid);
+          window.history.replaceState(null, '', u.pathname + u.search + u.hash);
+        }
+      } catch(e){}
       return oid;
     }
 
