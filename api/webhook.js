@@ -125,7 +125,7 @@ function renderOrderEmail(order) {
   }
 
   const d = new Date(order.received_date || Date.now());
-  const del = new Date(order.delivery_date || (Date.now() + 7 * 86400000));
+  const del = new Date(order.delivery_date || (Date.now() + 8 * 86400000));
 
   const daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -147,7 +147,7 @@ function renderOrderEmail(order) {
 
 function renderOrderPlainText(order) {
   const d = new Date(order.received_date || Date.now());
-  const del = new Date(order.delivery_date || (Date.now() + 7 * 86400000));
+  const del = new Date(order.delivery_date || (Date.now() + 8 * 86400000));
 
   const daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -513,7 +513,7 @@ async function handler(req, res) {
   const productImage = (envKey && process.env[envKey]) || process.env.PRODUCT_IMAGE_DEFAULT || '';
 
   const receivedAt  = payload.createdAt || new Date().toISOString();
-  const deliveredAt = addDays(receivedAt, 7);
+  const deliveredAt = addDays(receivedAt, 8);
   const now         = new Date().toISOString();
 
   // ── Step 7: build order record & apply idempotency ───────────────────────────

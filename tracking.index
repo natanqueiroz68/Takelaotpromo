@@ -1001,7 +1001,7 @@
                 if (orderIdSpan) orderIdSpan.textContent = '#' + _urlOrderId;
                 var today = new Date();
                 var delDate = new Date();
-                delDate.setDate(delDate.getDate() + 7);
+                delDate.setTime(delDate.getTime() + 8 * 86400000);
                 _renderTracking(today, delDate, 'PROCESSING');
                 return;
               }
@@ -1050,13 +1050,24 @@
         var imgEl = document.getElementById('trackingProductImg');
         if (imgEl) imgEl.src = 'images/fridge-main.jpg';
 
-        var stored = localStorage.getItem('takealot_purchase_date');
-        var purchaseDate = stored ? new Date(stored) : new Date();
-        if (isNaN(purchaseDate.getTime())) purchaseDate = new Date();
+        var purchaseKey = 'takealot_purchase_date_' + oid;
+        var deliveryKey = 'takealot_delivery_date_' + oid;
+        var stored = localStorage.getItem(purchaseKey) || localStorage.getItem('takealot_purchase_date');
+        var purchaseDate;
+        if (stored) {
+          purchaseDate = new Date(stored);
+          if (isNaN(purchaseDate.getTime())) purchaseDate = new Date();
+        } else {
+          purchaseDate = new Date();
+          try {
+            localStorage.setItem(purchaseKey, purchaseDate.toISOString());
+            localStorage.setItem('takealot_purchase_date', purchaseDate.toISOString());
+          } catch(e){}
+        }
         var today = new Date(); today.setHours(0,0,0,0);
         var purchaseMidnight = new Date(purchaseDate); purchaseMidnight.setHours(0,0,0,0);
         var daysElapsed = Math.floor((today - purchaseMidnight) / 86400000);
-        var deliveryDate = new Date(purchaseDate); deliveryDate.setDate(deliveryDate.getDate() + 7);
+        var deliveryDate = new Date(purchaseDate); deliveryDate.setTime(deliveryDate.getTime() + 8 * 86400000);
         // Map days elapsed to a pseudo-status
         var pseudoStatus = 'PROCESSING';
         if (daysElapsed >= 1) pseudoStatus = 'IN_TRANSIT';

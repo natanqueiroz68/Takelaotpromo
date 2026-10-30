@@ -645,18 +645,37 @@
       _setFallbackDates(fmt, odEl, ddEl);
 
       function _setFallbackDates(fmt, odEl, ddEl) {
-        var stored = localStorage.getItem('takealot_purchase_date');
+        var oid = urlOrderId || getOrderId();
+        var purchaseKey = 'takealot_purchase_date_' + oid;
+        var deliveryKey = 'takealot_delivery_date_' + oid;
+        var storedPurchase = localStorage.getItem(purchaseKey) || localStorage.getItem('takealot_purchase_date');
         var purchaseDate;
-        if (stored) {
-          purchaseDate = new Date(stored);
-          if (isNaN(purchaseDate.getTime()) || purchaseDate > new Date()) {
-            purchaseDate = new Date();
-          }
+        if (storedPurchase) {
+          purchaseDate = new Date(storedPurchase);
+          if (isNaN(purchaseDate.getTime())) purchaseDate = new Date();
         } else {
           purchaseDate = new Date();
+          try {
+            localStorage.setItem(purchaseKey, purchaseDate.toISOString());
+            localStorage.setItem('takealot_purchase_date', purchaseDate.toISOString());
+          } catch(e){}
         }
-        var deliveryDate = new Date(purchaseDate);
-        deliveryDate.setDate(deliveryDate.getDate() + 7);
+
+        var storedDelivery = localStorage.getItem(deliveryKey) || localStorage.getItem('takealot_delivery_date');
+        var deliveryDate;
+        if (storedDelivery) {
+          deliveryDate = new Date(storedDelivery);
+          if (isNaN(deliveryDate.getTime())) {
+            deliveryDate = new Date(purchaseDate.getTime() + 8 * 86400000);
+          }
+        } else {
+          deliveryDate = new Date(purchaseDate.getTime() + 8 * 86400000);
+          try {
+            localStorage.setItem(deliveryKey, deliveryDate.toISOString());
+            localStorage.setItem('takealot_delivery_date', deliveryDate.toISOString());
+          } catch(e){}
+        }
+
         if (odEl) odEl.textContent = fmt(purchaseDate);
         if (ddEl) ddEl.textContent = fmt(deliveryDate);
       }

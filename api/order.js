@@ -82,7 +82,7 @@ async function getLatestOrder() {
 
 function renderOrderPlainText(order) {
   const d = new Date(order.received_date || Date.now());
-  const del = new Date(order.delivery_date || (Date.now() + 7 * 86400000));
+  const del = new Date(order.delivery_date || (validCreatedTime + 8 * 86400000));
 
   const daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -153,7 +153,7 @@ async function ensureEmailSent(order, force = false) {
   try {
     const template = fs.readFileSync(path.join(process.cwd(), 'email.index'), 'utf8');
     const d = new Date(order.received_date || Date.now());
-    const del = new Date(order.delivery_date || (Date.now() + 7 * 86400000));
+    const del = new Date(order.delivery_date || (validCreatedTime + 8 * 86400000));
     const daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
     const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
     const daysLong = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -309,7 +309,10 @@ module.exports = async function handler(req, res) {
     }
 
     if (!order) {
-      const now = new Date().toISOString();
+      const createdTime = req.query.created ? new Date(req.query.created).getTime() : Date.now();
+      const validCreatedTime = (!isNaN(createdTime) && createdTime > 0) ? createdTime : Date.now();
+      const now = new Date(validCreatedTime).toISOString();
+      const fixedDelivery = new Date(validCreatedTime + 8 * 86400000).toISOString();
       order = {
         order_id: orderId,
         customer_name: (req.query.name || 'Customer').trim(),
@@ -321,7 +324,7 @@ module.exports = async function handler(req, res) {
         currency: 'ZAR',
         product_image: 'https://takeasealotsa.vercel.app/produto.png',
         received_date: now,
-        delivery_date: new Date(Date.now() + 7 * 86400000).toISOString(),
+        delivery_date: fixedDelivery,
         tracking_url: 'https://takeasealotsa.vercel.app/track.html?order=' + encodeURIComponent(orderId),
         status: 'PROCESSING',
         status_history: [
