@@ -495,6 +495,9 @@
           Your order number is
           <strong id="successOrderNum"></strong>
         </p>
+        <p class="order" style="font-size:clamp(13px,3.5vw,15px); margin-top:-10px;">
+          Ordered: <strong id="successOrderDate">–</strong>&nbsp;&nbsp;|&nbsp;&nbsp;Estimated Delivery: <strong id="successDeliveryDate">–</strong>
+        </p>
 
         <a href="track.html" class="btn" id="trackOrderBtn">
           Track Order
@@ -574,7 +577,40 @@
       return oid;
     }
 
-    (function initSucesso() {
+    (function initSuccess() {
+      // Clean up legacy generic date keys to prevent pollution
+      try {
+        localStorage.removeItem('takealot_purchase_date');
+        localStorage.removeItem('takealot_delivery_date');
+      } catch(e){}
+
+      function fmtSAST(dateInput) {
+        if (!dateInput) return '';
+        var d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+        if (isNaN(d.getTime())) return '';
+        var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        try {
+          var dtf = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'Africa/Johannesburg',
+            year: 'numeric', month: 'numeric', day: 'numeric', weekday: 'short', hour12: false
+          });
+          var p = {};
+          var parts = dtf.formatToParts(d);
+          for (var i = 0; i < parts.length; i++) p[parts[i].type] = parts[i].value;
+          var y = parseInt(p.year, 10);
+          var m = parseInt(p.month, 10);
+          var dayNum = parseInt(p.day, 10);
+          var anchor = new Date(Date.UTC(y, m - 1, dayNum, 12, 0, 0));
+          return days[anchor.getUTCDay()] + ', ' + anchor.getUTCDate() + ' ' + months[anchor.getUTCMonth()] + ' ' + anchor.getUTCFullYear();
+        } catch(e) {
+          var jDate = new Date(d.getTime() + 2 * 3600 * 1000);
+          return days[jDate.getUTCDay()] + ', ' + jDate.getUTCDate() + ' ' + months[jDate.getUTCMonth()] + ' ' + jDate.getUTCFullYear();
+        }
+      }
+
+      var odEl = document.getElementById('successOrderDate');
+      var ddEl = document.getElementById('successDeliveryDate');
       var onEl = document.getElementById('successOrderNum');
       var trackBtn = document.getElementById('trackOrderBtn');
 
@@ -582,6 +618,10 @@
         if (!oid) return;
         if (trackBtn) {
           trackBtn.href = 'track.html?order=' + encodeURIComponent(oid);
+        }
+        var otherLinks = document.querySelectorAll('a[data-order-link], a.track-link');
+        for (var i = 0; i < otherLinks.length; i++) {
+          otherLinks[i].href = 'track.html?order=' + encodeURIComponent(oid);
         }
       }
 
@@ -591,19 +631,74 @@
         if (onEl) onEl.textContent = urlOrderId;
         preserveOrderInLinks(urlOrderId);
 
-        fetch('/api/order?order=' + encodeURIComponent(urlOrderId))
+        // Fetch full order from API (source of truth)
+        var searchParams = new URLSearchParams(window.location.search);
+        var clientEmail = searchParams.get('email') || searchParams.get('customer_email') || '';
+        var clientName = searchParams.get('name') || searchParams.get('customer_name') || '';
+        var apiUrl = '/api/order?order=' + encodeURIComponent(urlOrderId);
+        if (clientEmail) {
+          apiUrl += '&create=1&email=' + encodeURIComponent(clientEmail);
+          if (clientName) apiUrl += '&name=' + encodeURIComponent(clientName);
+        }
+
+        fetch(apiUrl)
           .then(function(r) { return r.json(); })
           .then(function(order) {
-            if (order.error) return;
+            if (order.error) {
+              if (onEl) onEl.textContent = urlOrderId;
+              _setFallbackDates(odEl, ddEl, urlOrderId);
+              return;
+            }
             if (onEl) onEl.textContent = order.order_id;
+            var orderDateText = order.order_date_formatted || fmtSAST(order.received_date);
+            var delivDateText = order.delivery_date_formatted || fmtSAST(order.delivery_date);
+            if (odEl) odEl.textContent = orderDateText;
+            if (ddEl) ddEl.textContent = delivDateText;
+            try {
+              localStorage.setItem('takealot_order_date_' + order.order_id, orderDateText);
+              localStorage.setItem('takealot_delivery_date_' + order.order_id, delivDateText);
+            } catch(e){}
+            if (order.product_image) {
+              var img = document.querySelector('.product-img');
+              if (img) img.src = order.product_image;
+            }
             preserveOrderInLinks(order.order_id);
           })
-          .catch(function() {});
+          .catch(function() {
+            _setFallbackDates(odEl, ddEl, urlOrderId);
+          });
         return;
       }
 
-      if (onEl) onEl.textContent = '#' + (urlOrderId || getOrderId());
+      // No order in URL: show placeholder instead of inventing order number
+      var fallbackOid = urlOrderId || getOrderId();
+      if (onEl) onEl.textContent = '#' + fallbackOid;
       if (trackBtn) trackBtn.href = 'track.html';
+      _setFallbackDates(odEl, ddEl, fallbackOid);
+
+      function _setFallbackDates(odEl, ddEl, oid) {
+        var cachedOrder = localStorage.getItem('takealot_order_date_' + oid);
+        var cachedDeliv = localStorage.getItem('takealot_delivery_date_' + oid);
+        if (cachedOrder && cachedDeliv) {
+          if (odEl) odEl.textContent = cachedOrder;
+          if (ddEl) ddEl.textContent = cachedDeliv;
+          return;
+        }
+
+        var now = new Date();
+        var orderStr = fmtSAST(now);
+        // Exactly 8 calendar days after order date
+        var delivDate = new Date(now.getTime() + 8 * 86400000);
+        var delivStr = fmtSAST(delivDate);
+
+        try {
+          localStorage.setItem('takealot_order_date_' + oid, orderStr);
+          localStorage.setItem('takealot_delivery_date_' + oid, delivStr);
+        } catch(e){}
+
+        if (odEl) odEl.textContent = orderStr;
+        if (ddEl) ddEl.textContent = delivStr;
+      }
     })();
   </script>
 

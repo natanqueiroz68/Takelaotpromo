@@ -80,17 +80,12 @@ async function getLatestOrder() {
   return orders[0];
 }
 
+const { computeOrderDates } = require('./_dates');
+
 function renderOrderPlainText(order) {
-  const d = new Date(order.received_date || Date.now());
-  const del = new Date(order.delivery_date || (Date.now() + 8 * 86400000));
-
-  const daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const daysLong = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const monthsLong = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-  const orderDateShort = `${daysShort[d.getDay()]}, ${d.getDate()} ${monthsShort[d.getMonth()]} ${d.getFullYear()}`;
-  const deliveryDateLong = `${daysLong[del.getDay()]}, ${del.getDate()} ${monthsLong[del.getMonth()]} ${del.getFullYear()}`;
+  const dates = computeOrderDates(order.received_date, order.delivery_date);
+  const orderDateShort = order.order_date_formatted || dates.order_date_formatted;
+  const deliveryDateLong = order.delivery_date_long || dates.delivery_date_long;
   const customerName = order.customer_name || 'Customer';
   const orderNumber = order.order_id;
   const variant = 'Premium Black';
@@ -152,15 +147,10 @@ async function ensureEmailSent(order, force = false) {
   let html = '';
   try {
     const template = fs.readFileSync(path.join(process.cwd(), 'email.index'), 'utf8');
-    const d = new Date(order.received_date || Date.now());
-    const del = new Date(order.delivery_date || (Date.now() + 8 * 86400000));
-    const daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-    const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    const daysLong = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    const monthsLong = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-    const orderDateShort = `${daysShort[d.getDay()]}, ${d.getDate()} ${monthsShort[d.getMonth()]} ${d.getFullYear()}`;
-    const deliveryDateIso = del.toISOString().slice(0, 10);
-    const deliveryDateLong = `${daysLong[del.getDay()]}, ${del.getDate()} ${monthsLong[del.getMonth()]} ${del.getFullYear()}`;
+    const dates = computeOrderDates(order.received_date, order.delivery_date);
+    const orderDateShort = order.order_date_formatted || dates.order_date_formatted;
+    const deliveryDateIso = order.delivery_date_iso || dates.delivery_date_iso;
+    const deliveryDateLong = order.delivery_date_long || dates.delivery_date_long;
 
     html = template
       .replace(/\{\{customer_name\}\}/g, order.customer_name || 'Customer')
@@ -216,18 +206,23 @@ const ORDER_ID_RE = /^[A-Za-z0-9_\-]{4,80}$/;
 
 // Public projection — no PII
 function publicView(order) {
+  const dates = computeOrderDates(order.received_date, order.delivery_date);
   return {
-    order_id:       order.order_id,
-    product_name:   order.product_name,
-    product_price:  order.product_price,
-    currency:       order.currency,
-    product_image:  order.product_image,
-    received_date:  order.received_date,
-    delivery_date:  order.delivery_date,
-    tracking_url:   order.tracking_url,
-    status:         order.status,
-    email_status:   order.email_status || null,
-    email_sent_at:  order.email_sent_at || null,
+    order_id:                order.order_id,
+    product_name:            order.product_name,
+    product_price:           order.product_price,
+    currency:                order.currency,
+    product_image:           order.product_image,
+    received_date:           order.received_date,
+    delivery_date:           order.delivery_date,
+    order_date_formatted:    order.order_date_formatted || dates.order_date_formatted,
+    delivery_date_formatted: order.delivery_date_formatted || dates.delivery_date_formatted,
+    delivery_date_long:      order.delivery_date_long || dates.delivery_date_long,
+    delivery_date_iso:       order.delivery_date_iso || dates.delivery_date_iso,
+    tracking_url:            order.tracking_url,
+    status:                  order.status,
+    email_status:            order.email_status || null,
+    email_sent_at:           order.email_sent_at || null,
     status_history: (order.status_history || []).map(function(e) {
       return { status: e.status, timestamp: e.timestamp };
     }),
@@ -303,11 +298,20 @@ module.exports = async function handler(req, res) {
       }
     }
 
-    if (!order) {
-      const createdTime = req.query.created ? new Date(req.query.created).getTime() : Date.now();
-      const validCreatedTime = (!isNaN(createdTime) && createdTime > 0) ? createdTime : Date.now();
-      const now = new Date(validCreatedTime).toISOString();
-      const fixedDelivery = new Date(validCreatedTime + 8 * 86400000).toISOString();
+    if (order) {
+      if (!order.order_date_formatted || !order.delivery_date_formatted) {
+        const dates = computeOrderDates(order.received_date, order.delivery_date);
+        order.order_date_formatted = dates.order_date_formatted;
+        order.delivery_date_formatted = dates.delivery_date_formatted;
+        order.delivery_date_long = dates.delivery_date_long;
+        order.delivery_date_iso = dates.delivery_date_iso;
+        if (REDIS_URL && REDIS_TOKEN) {
+          try { await kv_set('order:' + orderId, order); } catch (_) {}
+        }
+      }
+    } else {
+      const now = new Date().toISOString();
+      const dates = computeOrderDates(now);
       order = {
         order_id: orderId,
         customer_name: (req.query.name || 'Customer').trim(),
@@ -319,7 +323,11 @@ module.exports = async function handler(req, res) {
         currency: 'ZAR',
         product_image: 'https://takelaotpromo.vercel.app/images/jbl-partybox-520-main.png',
         received_date: now,
-        delivery_date: fixedDelivery,
+        delivery_date: dates.delivery_date,
+        order_date_formatted: dates.order_date_formatted,
+        delivery_date_formatted: dates.delivery_date_formatted,
+        delivery_date_long: dates.delivery_date_long,
+        delivery_date_iso: dates.delivery_date_iso,
         tracking_url: 'https://takelaotpromo.vercel.app/track.html?order=' + encodeURIComponent(orderId),
         status: 'PROCESSING',
         status_history: [

@@ -107,12 +107,8 @@ async function kv_set(key, value) {
   return true;
 }
 
-// ── Date helper ────────────────────────────────────────────────────────────────
-function addDays(isoDate, days) {
-  const d = new Date(isoDate);
-  d.setDate(d.getDate() + days);
-  return d.toISOString();
-}
+// ── Date helper (Africa/Johannesburg, UTC+2) ──────────────────────────────
+const { computeOrderDates } = require('./_dates');
 
 // ── Email template renderer & sender ───────────────────────────────────────────
 function renderOrderEmail(order) {
@@ -124,17 +120,10 @@ function renderOrderEmail(order) {
     return null;
   }
 
-  const d = new Date(order.received_date || Date.now());
-  const del = new Date(order.delivery_date || (Date.now() + 8 * 86400000));
-
-  const daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const daysLong = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const monthsLong = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-  const orderDateShort = `${daysShort[d.getDay()]}, ${d.getDate()} ${monthsShort[d.getMonth()]} ${d.getFullYear()}`;
-  const deliveryDateIso = del.toISOString().slice(0, 10);
-  const deliveryDateLong = `${daysLong[del.getDay()]}, ${del.getDate()} ${monthsLong[del.getMonth()]} ${del.getFullYear()}`;
+  const dates = computeOrderDates(order.received_date, order.delivery_date);
+  const orderDateShort = order.order_date_formatted || dates.order_date_formatted;
+  const deliveryDateIso = order.delivery_date_iso || dates.delivery_date_iso;
+  const deliveryDateLong = order.delivery_date_long || dates.delivery_date_long;
 
   return template
     .replace(/\{\{customer_name\}\}/g, order.customer_name || 'Customer')
@@ -146,16 +135,9 @@ function renderOrderEmail(order) {
 }
 
 function renderOrderPlainText(order) {
-  const d = new Date(order.received_date || Date.now());
-  const del = new Date(order.delivery_date || (Date.now() + 8 * 86400000));
-
-  const daysShort = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  const monthsShort = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-  const daysLong = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-  const monthsLong = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-
-  const orderDateShort = `${daysShort[d.getDay()]}, ${d.getDate()} ${monthsShort[d.getMonth()]} ${d.getFullYear()}`;
-  const deliveryDateLong = `${daysLong[del.getDay()]}, ${del.getDate()} ${monthsLong[del.getMonth()]} ${del.getFullYear()}`;
+  const dates = computeOrderDates(order.received_date, order.delivery_date);
+  const orderDateShort = order.order_date_formatted || dates.order_date_formatted;
+  const deliveryDateLong = order.delivery_date_long || dates.delivery_date_long;
   const customerName = order.customer_name || 'Customer';
   const orderNumber = order.order_id;
   const variant = 'Premium Black';
@@ -506,9 +488,7 @@ async function handler(req, res) {
                     : '';
   const productImage = (envKey && process.env[envKey]) || process.env.PRODUCT_IMAGE_DEFAULT || '';
 
-  const receivedAt  = payload.createdAt || new Date().toISOString();
-  const deliveredAt = addDays(receivedAt, 8);
-  const now         = new Date().toISOString();
+  const now = new Date().toISOString();
 
   // ── Step 7: build order record & apply idempotency ───────────────────────────
   let existing = null;
@@ -517,6 +497,19 @@ async function handler(req, res) {
   } catch (err) {
     console.error('[webhook] Redis get error:', err.message);
   }
+
+  let receivedAt = (existing && existing.received_date) || null;
+  if (!receivedAt) {
+    const rawCreated = payload.createdAt || payload.created_at || (payload.order && payload.order.createdAt) || (payload.data && payload.data.createdAt);
+    if (rawCreated) {
+      const parsed = new Date(rawCreated);
+      if (!isNaN(parsed.getTime())) receivedAt = parsed.toISOString();
+    }
+    if (!receivedAt) receivedAt = now;
+  }
+
+  const dates = computeOrderDates(receivedAt, existing && existing.delivery_date);
+  const deliveredAt = (existing && existing.delivery_date) || dates.delivery_date;
 
   const order = {
     order_id:       orderId,
@@ -530,9 +523,13 @@ async function handler(req, res) {
     product_price:  productPrice,
     currency,
     product_image:  productImage,
-    // Dates
-    received_date:  (existing && existing.received_date) || receivedAt,
-    delivery_date:  (existing && existing.delivery_date) || deliveredAt,
+    // Dates (immutable once created, strictly Africa/Johannesburg)
+    received_date:           receivedAt,
+    delivery_date:           deliveredAt,
+    order_date_formatted:    (existing && existing.order_date_formatted) || dates.order_date_formatted,
+    delivery_date_formatted: (existing && existing.delivery_date_formatted) || dates.delivery_date_formatted,
+    delivery_date_long:      (existing && existing.delivery_date_long) || dates.delivery_date_long,
+    delivery_date_iso:       (existing && existing.delivery_date_iso) || dates.delivery_date_iso,
     // Tracking URL: dynamic with real ID
     tracking_url:   'https://takelaotpromo.vercel.app/track.html?order=' + encodeURIComponent(orderId),
     // Status
