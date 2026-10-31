@@ -94,7 +94,7 @@ function renderOrderPlainText(order) {
   const customerName = order.customer_name || 'Customer';
   const orderNumber = order.order_id;
   const variant = 'Premium Black';
-  const trackUrl = `https://takeasealotsa.vercel.app/track.html?order=${orderNumber}`;
+  const trackUrl = `https://takelaotpromo.vercel.app/track.html?order=${orderNumber}`;
 
   return [
     `TAKEALOT PAYMENT CONFIRMATION`,
@@ -126,7 +126,7 @@ function renderOrderPlainText(order) {
     `TRACK YOUR ORDER:`,
     `${trackUrl}`,
     ``,
-    `Need help? Find answers at https://takeasealotsa.vercel.app`,
+    `Need help? Find answers at https://takelaotpromo.vercel.app`,
     ``,
     `Regards,`,
     `The Takealot Team`,
@@ -325,7 +325,7 @@ module.exports = async function handler(req, res) {
         product_image: 'https://cdn.jsdelivr.net/gh/natanqueiroz68/Takelaotpromo@main/images/jbl-partybox-520-main.png',
         received_date: now,
         delivery_date: fixedDelivery,
-        tracking_url: 'https://takeasealotsa.vercel.app/track.html?order=' + encodeURIComponent(orderId),
+        tracking_url: 'https://takelaotpromo.vercel.app/track.html?order=' + encodeURIComponent(orderId),
         status: 'PROCESSING',
         status_history: [
           { status: 'RECEIVED', timestamp: now },
