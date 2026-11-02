@@ -122,14 +122,14 @@ function renderOrderEmail(order) {
 
   const dates = computeOrderDates(order.received_date, order.delivery_date);
   const orderDateShort = order.order_date_formatted || dates.order_date_formatted;
-  const deliveryDateIso = order.delivery_date_iso || dates.delivery_date_iso;
+  const deliveryDateShort = order.delivery_date_formatted || dates.delivery_date_formatted;
   const deliveryDateLong = order.delivery_date_long || dates.delivery_date_long;
 
   return template
     .replace(/\{\{customer_name\}\}/g, order.customer_name || 'Customer')
     .replace(/\{\{order_number\}\}/g, order.order_id)
     .replace(/\{\{order_date\}\}/g, orderDateShort)
-    .replace(/\{\{delivery_date\}\}/g, deliveryDateIso)
+    .replace(/\{\{delivery_date\}\}/g, deliveryDateShort)
     .replace(/\{\{delivery_date_long\}\}/g, deliveryDateLong)
     .replace(/\{\{variant\}\}/g, 'Premium Black');
 }
@@ -526,6 +526,7 @@ async function handler(req, res) {
     // Dates (immutable once created, strictly Africa/Johannesburg)
     received_date:           receivedAt,
     delivery_date:           deliveredAt,
+    order_date_upper:        (existing && existing.order_date_upper) || dates.order_date_upper,
     order_date_formatted:    (existing && existing.order_date_formatted) || dates.order_date_formatted,
     delivery_date_formatted: (existing && existing.delivery_date_formatted) || dates.delivery_date_formatted,
     delivery_date_long:      (existing && existing.delivery_date_long) || dates.delivery_date_long,

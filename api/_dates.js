@@ -1,9 +1,14 @@
 // api/_dates.js
 // Standardized South African (Africa/Johannesburg, UTC+2) date handling for Takealot.
 // Guarantees:
-// 1. Order Date is strictly based on Africa/Johannesburg timezone (SAST: UTC+2).
-// 2. Estimated Delivery Date = Order Date + exactly 8 calendar days.
-// 3. Immutability: Once computed and stored, dates never change.
+// 1. NENHUMA DATA FIXA OU HARDCODED NO CÓDIGO.
+// 2. Data da Compra (received_date): timestamp exato da compra (new Date().toISOString()).
+// 3. Data Estimada de Entrega (delivery_date): estritamente 8 dias corridos após a compra (received_date + 8 * 86400000 ms).
+// 4. Formatação de Datas:
+//    - Fuso horário oficial: Africa/Johannesburg (UTC+2, sem horário de verão).
+//    - Formato curto com dia da semana: "Tue, 10 Nov 2026"
+//    - Formato em caixa alta para resumo do pedido: "2 NOV 2026" (fmtShortUpper)
+//    - Formato longo por extenso para e-mails: "Tuesday, 10 November 2026"
 
 'use strict';
 
@@ -20,7 +25,7 @@ function getJohannesburgDateParts(d) {
   if (isNaN(dateObj.getTime())) dateObj = new Date();
 
   try {
-    const dtf = new Intl.DateTimeFormat('en-US', {
+    const dtf = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Africa/Johannesburg',
       year: 'numeric',
       month: 'numeric',
@@ -49,53 +54,135 @@ function getJohannesburgDateParts(d) {
 }
 
 /**
+ * Format a Date in Africa/Johannesburg timezone to short weekday format:
+ * e.g. "Tue, 10 Nov 2026"
+ */
+function formatShort(dateObj) {
+  try {
+    const dtf = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Africa/Johannesburg',
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    return dtf.format(dateObj);
+  } catch (_) {
+    const parts = getJohannesburgDateParts(dateObj);
+    const anchor = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 12, 0, 0));
+    return `${DAYS_SHORT[anchor.getUTCDay()]}, ${anchor.getUTCDate()} ${MONTHS_SHORT[anchor.getUTCMonth()]} ${anchor.getUTCFullYear()}`;
+  }
+}
+
+/**
+ * Format a Date in Africa/Johannesburg timezone to uppercase order summary format:
+ * e.g. "2 NOV 2026"
+ */
+function formatShortUpper(dateObj) {
+  try {
+    const dtf = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Africa/Johannesburg',
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    });
+    return dtf.format(dateObj).toUpperCase();
+  } catch (_) {
+    const parts = getJohannesburgDateParts(dateObj);
+    const anchor = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 12, 0, 0));
+    return `${anchor.getUTCDate()} ${MONTHS_SHORT[anchor.getUTCMonth()].toUpperCase()} ${anchor.getUTCFullYear()}`;
+  }
+}
+
+/**
+ * Format a Date in Africa/Johannesburg timezone to long full weekday format for emails:
+ * e.g. "Tuesday, 10 November 2026"
+ */
+function formatLong(dateObj) {
+  try {
+    const dtf = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Africa/Johannesburg',
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
+    return dtf.format(dateObj);
+  } catch (_) {
+    const parts = getJohannesburgDateParts(dateObj);
+    const anchor = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 12, 0, 0));
+    return `${DAYS_LONG[anchor.getUTCDay()]}, ${anchor.getUTCDate()} ${MONTHS_LONG[anchor.getUTCMonth()]} ${anchor.getUTCFullYear()}`;
+  }
+}
+
+/**
  * Computes deterministic order and delivery date representations in Africa/Johannesburg.
- * Formula: Estimated Delivery Date = Order Date + 8 calendar days.
+ * Formula: Estimated Delivery Date = Order Date + exactly 8 calendar days (8 * 86400000 ms).
  */
 function computeOrderDates(orderDateInput, existingDeliveryDate) {
-  const parts = getJohannesburgDateParts(orderDateInput);
-  const jhbYear = parts.year;
-  const jhbMonth = parts.month; // 1-12
-  const jhbDay = parts.day;     // 1-31
-
-  // Midday UTC anchors guarantee timezone-immune calendar day representation
-  const orderAnchor = new Date(Date.UTC(jhbYear, jhbMonth - 1, jhbDay, 12, 0, 0));
-
-  let deliveryAnchor;
-  if (existingDeliveryDate) {
-    const edParts = getJohannesburgDateParts(existingDeliveryDate);
-    deliveryAnchor = new Date(Date.UTC(edParts.year, edParts.month - 1, edParts.day, 12, 0, 0));
-  } else {
-    // Exactly 8 calendar days after order date
-    deliveryAnchor = new Date(Date.UTC(jhbYear, jhbMonth - 1, jhbDay + 8, 12, 0, 0));
+  let receivedDateObj = orderDateInput instanceof Date ? orderDateInput : (orderDateInput ? new Date(orderDateInput) : null);
+  if (!receivedDateObj || isNaN(receivedDateObj.getTime())) {
+    receivedDateObj = new Date();
   }
+  const receivedIso = receivedDateObj.toISOString();
 
-  const oDayOfWeek = DAYS_SHORT[orderAnchor.getUTCDay()];
-  const oMonthName = MONTHS_SHORT[orderAnchor.getUTCMonth()];
-  const oDay = orderAnchor.getUTCDate();
-  const oYear = orderAnchor.getUTCFullYear();
+  let deliveryDateObj = existingDeliveryDate instanceof Date ? existingDeliveryDate : (existingDeliveryDate ? new Date(existingDeliveryDate) : null);
+  if (!deliveryDateObj || isNaN(deliveryDateObj.getTime())) {
+    // Strictly 8 calendar days after order date (8 * 86400000 ms)
+    deliveryDateObj = new Date(receivedDateObj.getTime() + 8 * 86400000);
+  }
+  const deliveryIso = deliveryDateObj.toISOString();
 
-  const dDayOfWeekShort = DAYS_SHORT[deliveryAnchor.getUTCDay()];
-  const dDayOfWeekLong = DAYS_LONG[deliveryAnchor.getUTCDay()];
-  const dMonthNameShort = MONTHS_SHORT[deliveryAnchor.getUTCMonth()];
-  const dMonthNameLong = MONTHS_LONG[deliveryAnchor.getUTCMonth()];
-  const dDay = deliveryAnchor.getUTCDate();
-  const dYear = deliveryAnchor.getUTCFullYear();
+  const orderDateShort = formatShort(receivedDateObj);
+  const orderDateUpper = formatShortUpper(receivedDateObj);
+  const deliveryDateShort = formatShort(deliveryDateObj);
+  const deliveryDateLong = formatLong(deliveryDateObj);
 
-  const rawInput = orderDateInput instanceof Date ? orderDateInput : (orderDateInput ? new Date(orderDateInput) : null);
-  const receivedIso = (rawInput && !isNaN(rawInput.getTime())) ? rawInput.toISOString() : new Date().toISOString();
+  const delivParts = getJohannesburgDateParts(deliveryDateObj);
+  const delivY = delivParts.year;
+  const delivM = String(delivParts.month).padStart(2, '0');
+  const delivD = String(delivParts.day).padStart(2, '0');
+  const deliveryDateIso = `${delivY}-${delivM}-${delivD}`;
 
   return {
     received_date: receivedIso,
-    delivery_date: deliveryAnchor.toISOString(),
-    order_date_formatted: `${oDayOfWeek}, ${oDay} ${oMonthName} ${oYear}`,
-    delivery_date_formatted: `${dDayOfWeekShort}, ${dDay} ${dMonthNameShort} ${dYear}`,
-    delivery_date_long: `${dDayOfWeekLong}, ${dDay} ${dMonthNameLong} ${dYear}`,
-    delivery_date_iso: deliveryAnchor.toISOString().slice(0, 10),
+    delivery_date: deliveryIso,
+    order_date_upper: orderDateUpper,
+    order_date_formatted: orderDateShort,
+    delivery_date_formatted: deliveryDateShort,
+    delivery_date_long: deliveryDateLong,
+    delivery_date_iso: deliveryDateIso,
   };
+}
+
+function getSADateIso(dateInput) {
+  if (!dateInput) return null;
+  const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+  if (isNaN(d.getTime())) return null;
+  return new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Africa/Johannesburg',
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(d);
+}
+
+function calculateSADaysElapsed(receivedDateInput, nowInput = new Date()) {
+  const pIso = getSADateIso(receivedDateInput);
+  const nowIso = getSADateIso(nowInput);
+  if (!pIso || !nowIso) return 0;
+  const [py, pm, pd] = pIso.split('-').map(Number);
+  const [ny, nm, nd] = nowIso.split('-').map(Number);
+  const diff = Math.floor((Date.UTC(ny, nm - 1, nd) - Date.UTC(py, pm - 1, pd)) / 86400000);
+  return diff < 0 ? 0 : diff;
 }
 
 module.exports = {
   getJohannesburgDateParts,
+  formatShort,
+  formatShortUpper,
+  formatLong,
   computeOrderDates,
+  getSADateIso,
+  calculateSADaysElapsed,
 };

@@ -290,6 +290,19 @@
       border-radius: 9999px;
       transform: translateX(-50%);
       z-index: 1;
+      overflow: hidden;
+    }
+
+    .stepper-progress-fill {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 0%;
+      background: #0c77c3;
+      border-radius: 9999px;
+      transition: height 1s cubic-bezier(0.4, 0, 0.2, 1), background 0.8s ease, box-shadow 0.8s ease;
+      box-shadow: 0 0 6px rgba(12, 119, 195, 0.35);
     }
 
     .step-item {
@@ -714,8 +727,10 @@
     <section class="stepper-section" aria-label="Order tracking timeline">
       <div class="stepper-container">
 
-        <!-- Trilha contínua de fundo cinza claro -->
-        <div class="stepper-continuous-track"></div>
+        <!-- Trilha contínua de fundo cinza claro com preenchimento animado -->
+        <div class="stepper-continuous-track">
+          <div class="stepper-progress-fill" id="stepperProgressFill"></div>
+        </div>
 
         <!-- ETAPA 1: ORDER PAID (ÍCONE DE CADEADO AZUL) -->
         <div class="step-item" id="stepItemPaid">
@@ -895,12 +910,39 @@
   </div>
 
   <script>
-    // ---- Date helpers (Africa/Johannesburg, UTC+2) ----
+    // ---- 1. ARQUITETURA DE DATAS DINÂMICAS (FUSO AFRICA/JOHANNESBURG) ----
+    function getSADateIso(d) {
+      if (!d) return null;
+      var dateObj = d instanceof Date ? d : new Date(d);
+      if (isNaN(dateObj.getTime())) return null;
+      try {
+        return new Intl.DateTimeFormat('en-CA', {
+          timeZone: 'Africa/Johannesburg',
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit'
+        }).format(dateObj);
+      } catch(e) {
+        var jhb = new Date(dateObj.getTime() + 2 * 3600000);
+        return jhb.getUTCFullYear() + '-' + String(jhb.getUTCMonth() + 1).padStart(2, '0') + '-' + String(jhb.getUTCDate()).padStart(2, '0');
+      }
+    }
+
+    function calculateSADaysElapsed(pDate, nDate) {
+      var pIso = getSADateIso(pDate);
+      var nIso = getSADateIso(nDate || new Date());
+      if (!pIso || !nIso) return 0;
+      var pParts = pIso.split('-').map(Number);
+      var nParts = nIso.split('-').map(Number);
+      var diff = Math.floor((Date.UTC(nParts[0], nParts[1] - 1, nParts[2]) - Date.UTC(pParts[0], pParts[1] - 1, pParts[2])) / 86400000);
+      return diff < 0 ? 0 : diff;
+    }
+
     function getJohannesburgDateParts(d) {
       var dateObj = d instanceof Date ? d : (d ? new Date(d) : new Date());
       if (isNaN(dateObj.getTime())) dateObj = new Date();
       try {
-        var dtf = new Intl.DateTimeFormat('en-US', {
+        var dtf = new Intl.DateTimeFormat('en-GB', {
           timeZone: 'Africa/Johannesburg',
           year: 'numeric', month: 'numeric', day: 'numeric', hour12: false
         });
@@ -922,21 +964,70 @@
       }
     }
 
-    function fmtLong(d) {
+    // Formato curto com dia da semana: "Tue, 10 Nov 2026"
+    function fmtShort(d) {
       if (!d) return '';
-      var parts = getJohannesburgDateParts(d);
-      var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-      var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      var anchor = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 12, 0, 0));
-      return days[anchor.getUTCDay()] + ', ' + anchor.getUTCDate() + ' ' + months[anchor.getUTCMonth()] + ' ' + anchor.getUTCFullYear();
+      var dateObj = d instanceof Date ? d : new Date(d);
+      if (isNaN(dateObj.getTime())) return '';
+      try {
+        var dtf = new Intl.DateTimeFormat('en-GB', {
+          timeZone: 'Africa/Johannesburg',
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        });
+        return dtf.format(dateObj);
+      } catch(e) {
+        var p = getJohannesburgDateParts(dateObj);
+        var days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        var months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+        var anchor = new Date(Date.UTC(p.year, p.month - 1, p.day, 12, 0, 0));
+        return days[anchor.getUTCDay()] + ', ' + anchor.getUTCDate() + ' ' + months[anchor.getUTCMonth()] + ' ' + anchor.getUTCFullYear();
+      }
     }
 
+    // Formato em caixa alta para resumo do pedido: "2 NOV 2026" (fmtShortUpper)
     function fmtShortUpper(d) {
       if (!d) return '';
-      var parts = getJohannesburgDateParts(d);
-      var months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-      var anchor = new Date(Date.UTC(parts.year, parts.month - 1, parts.day, 12, 0, 0));
-      return anchor.getUTCDate() + ' ' + months[anchor.getUTCMonth()] + ' ' + anchor.getUTCFullYear();
+      var dateObj = d instanceof Date ? d : new Date(d);
+      if (isNaN(dateObj.getTime())) return '';
+      try {
+        var dtf = new Intl.DateTimeFormat('en-GB', {
+          timeZone: 'Africa/Johannesburg',
+          day: 'numeric',
+          month: 'short',
+          year: 'numeric'
+        });
+        return dtf.format(dateObj).toUpperCase();
+      } catch(e) {
+        var p = getJohannesburgDateParts(dateObj);
+        var months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+        return p.day + ' ' + months[p.month - 1] + ' ' + p.year;
+      }
+    }
+
+    // Formato longo por extenso para e-mails / status: "Tuesday, 10 November 2026"
+    function fmtLong(d) {
+      if (!d) return '';
+      var dateObj = d instanceof Date ? d : new Date(d);
+      if (isNaN(dateObj.getTime())) return '';
+      try {
+        var dtf = new Intl.DateTimeFormat('en-GB', {
+          timeZone: 'Africa/Johannesburg',
+          weekday: 'long',
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric'
+        });
+        return dtf.format(dateObj);
+      } catch(e) {
+        var p = getJohannesburgDateParts(dateObj);
+        var days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+        var months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        var anchor = new Date(Date.UTC(p.year, p.month - 1, p.day, 12, 0, 0));
+        return days[anchor.getUTCDay()] + ', ' + anchor.getUTCDate() + ' ' + months[anchor.getUTCMonth()] + ' ' + anchor.getUTCFullYear();
+      }
     }
 
     function fmtMonthYear(d) {
@@ -982,7 +1073,7 @@
 
     function preserveOrderInLinks(oid) {
       if (!oid) return;
-      var links = document.querySelectorAll('a[href*="sucess.html"], a[href*="tracking.html"], a[href*="track.html"]');
+      var links = document.querySelectorAll('a[href*="sucess.html"], a[href*="sucesso.html"], a[href*="tracking.html"], a[href*="track.html"]');
       for (var i = 0; i < links.length; i++) {
         try {
           var u = new URL(links[i].href, window.location.origin);
@@ -992,68 +1083,110 @@
       }
     }
 
+    // ---- 3. BARRA DE PROGRESSO ANIMADA (TRACKING STEPPER) ----
     function _renderTracking(purchaseDate, deliveryDate, status, order) {
-      var pParts = getJohannesburgDateParts(purchaseDate);
-      var shipAnchor = new Date(Date.UTC(pParts.year, pParts.month - 1, pParts.day + 1, 12, 0, 0));
-      var dParts = getJohannesburgDateParts(deliveryDate);
-      var deliveryAnchor = new Date(Date.UTC(dParts.year, dParts.month - 1, dParts.day, 12, 0, 0));
+      var pObj = purchaseDate instanceof Date ? purchaseDate : new Date(purchaseDate);
+      var dObj = deliveryDate instanceof Date ? deliveryDate : new Date(deliveryDate);
+      if (isNaN(pObj.getTime())) pObj = new Date();
+      if (isNaN(dObj.getTime())) dObj = new Date(pObj.getTime() + 8 * 86400000);
 
-      var orderDateShort = fmtShortUpper(purchaseDate);
-      var shipDateShort = fmtShortUpper(shipAnchor);
-      var deliveryDateShort = fmtShortUpper(deliveryAnchor);
-      var deliveryDateLong = (order && order.delivery_date_formatted) ? order.delivery_date_formatted : fmtLong(deliveryAnchor);
+      // Ship date: exactly 1 calendar day after purchase
+      var shipDate = new Date(pObj.getTime() + 1 * 86400000);
+
+      var orderDateUpper = (order && order.order_date_upper) ? order.order_date_upper : fmtShortUpper(pObj);
+      var shipDateUpper = fmtShortUpper(shipDate);
+      var deliveryDateUpper = fmtShortUpper(dObj);
+      var deliveryDateFormatted = (order && order.delivery_date_formatted) ? order.delivery_date_formatted : fmtShort(dObj);
+      var deliveryDateLong = (order && order.delivery_date_long) ? order.delivery_date_long : fmtLong(dObj);
 
       var el;
-      el = document.getElementById('stepDatePaid');     if(el) el.textContent = orderDateShort;
-      el = document.getElementById('stepDateShip');     if(el) el.textContent = shipDateShort;
-      el = document.getElementById('stepDateDelivery'); if(el) el.textContent = deliveryDateShort;
-      el = document.getElementById('trackingDeliveryDate'); if(el) el.textContent = deliveryDateLong;
-      el = document.getElementById('stepTitleDelivery');
-      if(el) el.innerHTML = 'ESTIMATED DELIVERY ' + fmtMonthYear(deliveryAnchor);
+      el = document.getElementById('stepDatePaid');     if (el) el.textContent = orderDateUpper;
+      el = document.getElementById('stepDateShip');     if (el) el.textContent = shipDateUpper;
+      el = document.getElementById('stepDateDelivery'); if (el) el.textContent = deliveryDateUpper;
+      el = document.getElementById('trackingDeliveryDate'); if (el) el.textContent = deliveryDateFormatted;
 
       var nodeShip   = document.getElementById('stepNodeShip');
       var nodeDel    = document.getElementById('stepNodeDelivery');
       var titleShip  = document.getElementById('stepTitleShip');
       var titleDel   = document.getElementById('stepTitleDelivery');
       var delivTitle = document.getElementById('trackingDeliveryTitle');
+      var fillEl     = document.getElementById('stepperProgressFill');
 
       // CANCELLED state
       if (status === 'CANCELLED') {
         if (delivTitle) delivTitle.innerHTML = 'This order was cancelled';
+        if (fillEl) fillEl.style.height = '0%';
         return;
       }
 
-      // IN_TRANSIT or DELIVERED → mark ship step active
-      if ((status === 'IN_TRANSIT' || status === 'DELIVERED') && nodeShip) {
-        nodeShip.innerHTML = '<svg viewBox="0 0 22 22" style="width:22px;height:22px;"><circle cx="11" cy="11" r="10.5" fill="#0c77c3"/><text x="11" y="15.5" text-anchor="middle" fill="white" font-size="13" font-weight="bold">✓</text></svg>';
-        if(titleShip) titleShip.textContent = 'Shipped';
+      // Determine progression status dynamically by elapsed time in Africa/Johannesburg (zero date bug)
+      var daysElapsed = calculateSADaysElapsed(pObj, new Date());
+
+      var effectiveStatus = status || 'PROCESSING';
+      if (effectiveStatus === 'PROCESSING' && daysElapsed >= 8) {
+        effectiveStatus = 'DELIVERED';
+      } else if (effectiveStatus === 'PROCESSING' && daysElapsed >= 1) {
+        effectiveStatus = 'IN_TRANSIT';
       }
 
-      // DELIVERED → mark delivery step active
-      if (status === 'DELIVERED') {
+      // Animacao suave da barra de progresso (conforme Regra 3)
+      setTimeout(function() {
+        if (!fillEl) return;
+        if (effectiveStatus === 'DELIVERED' || daysElapsed >= 8) {
+          // Status DELIVERED (ou após o 8º dia): A barra anima até 100%, o gradiente muda para verde
+          fillEl.style.height = '100%';
+          fillEl.style.background = 'linear-gradient(180deg, #0c77c3 0%, #16a34a 100%)';
+        } else if (effectiveStatus === 'IN_TRANSIT' || daysElapsed >= 1) {
+          // Status IN_TRANSIT / Shipped (ou a partir do dia seguinte): A barra anima até 56%
+          fillEl.style.height = '56%';
+          fillEl.style.background = '#0c77c3';
+        } else {
+          // Status PROCESSING / Pedido Pago: A barra anima até 18% (atingindo o 1º nó "Order paid")
+          fillEl.style.height = '18%';
+          fillEl.style.background = '#0c77c3';
+        }
+      }, 120);
+
+      // Status IN_TRANSIT / Shipped: o nó 2 muda para azul com ícone ✓ e o texto vira "Shipped"
+      if (effectiveStatus === 'IN_TRANSIT' || effectiveStatus === 'DELIVERED') {
+        if (nodeShip) {
+          nodeShip.innerHTML = '<svg viewBox="0 0 22 22" style="width:22px;height:22px;"><circle cx="11" cy="11" r="10.5" fill="#0c77c3"/><text x="11" y="15.5" text-anchor="middle" fill="white" font-size="13" font-weight="bold">✓</text></svg>';
+        }
+        if (titleShip) titleShip.textContent = 'Shipped';
+      }
+
+      // Status DELIVERED: o nó 3 vira verde com ✓ e o status vira "DELIVERED"
+      if (effectiveStatus === 'DELIVERED') {
         if (nodeDel) {
           nodeDel.innerHTML = '<svg viewBox="0 0 22 22" style="width:22px;height:22px;"><circle cx="11" cy="11" r="10.5" fill="#16a34a"/><text x="11" y="15.5" text-anchor="middle" fill="white" font-size="13" font-weight="bold">✓</text></svg>';
         }
         if (titleDel) {
-          titleDel.innerHTML = 'DELIVERED ' + fmtMonthYear(deliveryAnchor);
+          titleDel.innerHTML = 'DELIVERED ' + fmtMonthYear(dObj);
           titleDel.style.color = '#16a34a';
         }
         if (delivTitle) delivTitle.innerHTML = 'Delivered on ' + deliveryDateLong;
+      } else {
+        if (titleDel) {
+          titleDel.innerHTML = 'ESTIMATED DELIVERY ' + fmtMonthYear(dObj);
+        }
       }
     }
 
+    // ---- 2. ISOLAMENTO TOTAL DE CACHE & HIGIENIZAÇÃO AUTOMÁTICA ----
     (function initTracking() {
       try {
-        // Clean up legacy generic date keys to prevent pollution
+        // 1. Higienização Automática de Cache Legado Global (apenas chaves sem ID do pedido)
         try {
           localStorage.removeItem('takealot_purchase_date');
           localStorage.removeItem('takealot_delivery_date');
+          localStorage.removeItem('takealot_order_date');
+          localStorage.removeItem('takealot_deliv_date');
         } catch(e){}
 
-        // ---- If URL has order ID: fetch from API (source of truth) ----
+        // 3. Fonte primária da verdade: API do backend (/api/order?order=${order_id}&auto_notify=1)
         if (_urlOrderId) {
           preserveOrderInLinks(_urlOrderId);
-          fetch('/api/order?order=' + encodeURIComponent(_urlOrderId))
+          fetch('/api/order?order=' + encodeURIComponent(_urlOrderId) + '&auto_notify=1')
             .then(function(r) { return r.json(); })
             .then(function(order) {
               if (order.error) {
@@ -1061,39 +1194,31 @@
                 if (delivTitle) delivTitle.innerHTML = 'Takealot Delivery &middot; Tracking #' + _urlOrderId;
                 var orderIdSpan = document.getElementById('trackingOrderId');
                 if (orderIdSpan) orderIdSpan.textContent = '#' + _urlOrderId;
-                _legacyTrackingFallback();
+                _fallbackTracking();
                 return;
               }
 
-              // ---- Product image from API ----
+              // Atualizar imagem do produto
               if (order.product_image) {
                 var imgEl = document.getElementById('trackingProductImg');
                 if (imgEl) { imgEl.src = order.product_image; imgEl.onerror = null; }
               }
 
-              // ---- Update page title and order number span ----
+              // Atualizar título da página e identificador
               if (document.title) document.title = 'Tracking #' + order.order_id + ' | Takealot.com';
               var orderIdSpan = document.getElementById('trackingOrderId');
               if (orderIdSpan) orderIdSpan.textContent = '#' + order.order_id;
               preserveOrderInLinks(order.order_id);
 
-              // Cache order-specific dates for offline/instant reload
+              // Salvar no cache isolado por ID de pedido
               try {
-                if (order.order_date_formatted) {
-                  localStorage.setItem('takealot_order_date_' + order.order_id, order.order_date_formatted);
-                }
-                if (order.delivery_date_formatted) {
-                  localStorage.setItem('takealot_delivery_date_' + order.order_id, order.delivery_date_formatted);
-                }
-                if (order.received_date) {
-                  localStorage.setItem('takealot_received_iso_' + order.order_id, order.received_date);
-                }
-                if (order.delivery_date) {
-                  localStorage.setItem('takealot_delivery_iso_' + order.order_id, order.delivery_date);
-                }
+                localStorage.setItem('takealot_purchase_date_' + order.order_id, order.received_date || new Date().toISOString());
+                localStorage.setItem('takealot_delivery_date_' + order.order_id, order.delivery_date || new Date(Date.now() + 8 * 86400000).toISOString());
+                localStorage.setItem('takealot_order_date_fmt_' + order.order_id, order.order_date_formatted || fmtShort(order.received_date));
+                localStorage.setItem('takealot_deliv_date_fmt_' + order.order_id, order.delivery_date_formatted || fmtShort(order.delivery_date));
               } catch(e){}
 
-              // ---- Render dates and status ----
+              // Renderizar dados e animar o stepper
               _renderTracking(
                 new Date(order.received_date),
                 new Date(order.delivery_date),
@@ -1103,19 +1228,19 @@
             })
             .catch(function(err) {
               console.error('[tracking] API error:', err);
-              _legacyTrackingFallback();
+              _fallbackTracking();
             });
           return;
         }
 
-        // ---- No URL param: fall back to order-specific cache / fallback ----
-        _legacyTrackingFallback();
+        // Fallback sem ID na URL
+        _fallbackTracking();
 
       } catch(e) { console.error(e); }
     })();
 
-    // Fallback path: order-specific localStorage without modifying dates on subsequent visits
-    function _legacyTrackingFallback() {
+    // Fallback: cache isolado por ID ou geração dinâmica com Africa/Johannesburg
+    function _fallbackTracking() {
       try {
         var oid = _urlOrderId || getOrderId();
         var orderIdSpan = document.getElementById('trackingOrderId');
@@ -1126,48 +1251,33 @@
         var imgEl = document.getElementById('trackingProductImg');
         if (imgEl) imgEl.src = 'images/jbl-partybox-520-main.png';
 
-        var orderIsoKey = 'takealot_received_iso_' + oid;
-        var delivIsoKey = 'takealot_delivery_iso_' + oid;
-        var storedIso = localStorage.getItem(orderIsoKey);
+        var pKey = 'takealot_purchase_date_' + oid;
+        var dKey = 'takealot_delivery_date_' + oid;
+        var storedPurchaseIso = localStorage.getItem(pKey);
+        var storedDelivIso = localStorage.getItem(dKey);
         var purchaseDate;
         var deliveryDate;
 
-        if (storedIso && !isNaN(new Date(storedIso).getTime())) {
-          purchaseDate = new Date(storedIso);
-          var storedDelivIso = localStorage.getItem(delivIsoKey);
+        if (storedPurchaseIso && !isNaN(new Date(storedPurchaseIso).getTime())) {
+          purchaseDate = new Date(storedPurchaseIso);
           if (storedDelivIso && !isNaN(new Date(storedDelivIso).getTime())) {
             deliveryDate = new Date(storedDelivIso);
           } else {
-            var pParts = getJohannesburgDateParts(purchaseDate);
-            deliveryDate = new Date(Date.UTC(pParts.year, pParts.month - 1, pParts.day + 8, 12, 0, 0));
+            deliveryDate = new Date(purchaseDate.getTime() + 8 * 86400000);
           }
         } else {
-          // If already has order_date text cached from success page:
-          var cachedOrderStr = localStorage.getItem('takealot_order_date_' + oid);
           var now = new Date();
-          var pParts = getJohannesburgDateParts(now);
-          purchaseDate = new Date(Date.UTC(pParts.year, pParts.month - 1, pParts.day, 12, 0, 0));
-          deliveryDate = new Date(Date.UTC(pParts.year, pParts.month - 1, pParts.day + 8, 12, 0, 0));
+          purchaseDate = now;
+          deliveryDate = new Date(now.getTime() + 8 * 86400000);
           try {
-            localStorage.setItem(orderIsoKey, purchaseDate.toISOString());
-            localStorage.setItem(delivIsoKey, deliveryDate.toISOString());
-            if (!cachedOrderStr) {
-              localStorage.setItem('takealot_order_date_' + oid, fmtLong(purchaseDate));
-              localStorage.setItem('takealot_delivery_date_' + oid, fmtLong(deliveryDate));
-            }
+            localStorage.setItem(pKey, purchaseDate.toISOString());
+            localStorage.setItem(dKey, deliveryDate.toISOString());
+            localStorage.setItem('takealot_order_date_fmt_' + oid, fmtShort(purchaseDate));
+            localStorage.setItem('takealot_deliv_date_fmt_' + oid, fmtShort(deliveryDate));
           } catch(e){}
         }
 
-        var nowParts = getJohannesburgDateParts(new Date());
-        var nowAnchor = new Date(Date.UTC(nowParts.year, nowParts.month - 1, nowParts.day, 12, 0, 0));
-        var pParts2 = getJohannesburgDateParts(purchaseDate);
-        var pAnchor = new Date(Date.UTC(pParts2.year, pParts2.month - 1, pParts2.day, 12, 0, 0));
-        var daysElapsed = Math.floor((nowAnchor - pAnchor) / 86400000);
-
-        var pseudoStatus = 'PROCESSING';
-        if (daysElapsed >= 1) pseudoStatus = 'IN_TRANSIT';
-        if (daysElapsed >= 7) pseudoStatus = 'DELIVERED';
-        _renderTracking(purchaseDate, deliveryDate, pseudoStatus);
+        _renderTracking(purchaseDate, deliveryDate, 'PROCESSING');
       } catch(e) { console.error(e); }
     }
   </script>
