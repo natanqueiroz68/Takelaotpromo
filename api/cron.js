@@ -12,8 +12,14 @@
 
 'use strict';
 
-const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL || process.env.KV_REST_API_URL || process.env.REDIS_URL;
-const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_TOKEN || process.env.REDIS_TOKEN;
+const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL
+  || process.env.KV_REST_API_URL
+  || process.env.REDIS_URL
+  || 'https://magnetic-werewolf-246021.upstash.io';
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN
+  || process.env.KV_REST_API_TOKEN
+  || process.env.REDIS_TOKEN
+  || 'gQAAAAAAA8EFAAIgcDEyZTUyMjZlMTVlN2Y0YWI0YjA3YzVlOThiOWY3YTllMw';
 
 const VISIONSPY_KEY = process.env.VISIONSPY_API_KEY
   || process.env.VISION_SPY_API_KEY
@@ -456,6 +462,7 @@ module.exports = async function handler(req, res) {
   const startTime = Date.now();
   const force = req.query.force === '1' || req.query.force === 'true';
   const targetOrderId = (req.query.order || req.query.id || '').trim();
+  const stageOverride = req.query.stage !== undefined ? parseInt(req.query.stage, 10) : null;
   const todaySA = getSADateIso(new Date());
 
   if (!REDIS_URL || !REDIS_TOKEN) {
@@ -468,9 +475,18 @@ module.exports = async function handler(req, res) {
     let ordersToProcess = [];
 
     if (targetOrderId) {
-      const single = await kv_get('order:' + targetOrderId);
+      let single = await kv_get('order:' + targetOrderId);
       if (!single) {
-        return res.status(404).json({ error: `Order #${targetOrderId} not found in database` });
+        if (req.query.to || req.query.email) {
+          single = {
+            order_id: targetOrderId,
+            customer_name: (req.query.name || 'Customer').trim(),
+            customer_email: (req.query.to || req.query.email).trim(),
+            received_date: req.query.date || req.query.received_date || new Date().toISOString(),
+          };
+        } else {
+          return res.status(404).json({ error: `Order #${targetOrderId} not found in database` });
+        }
       }
       ordersToProcess = [single];
     } else {
@@ -498,7 +514,7 @@ module.exports = async function handler(req, res) {
     const results = [];
     for (const ord of ordersToProcess) {
       try {
-        const r = await processOrderDailyEmail(ord, { force, template });
+        const r = await processOrderDailyEmail(ord, { force, stageOverride, template });
         results.push(r);
       } catch (err) {
         results.push({ order_id: ord.order_id, action: 'ERROR', error: err.message });

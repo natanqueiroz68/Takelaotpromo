@@ -19,8 +19,14 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
-const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL;
-const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN;
+const REDIS_URL   = process.env.UPSTASH_REDIS_REST_URL
+  || process.env.KV_REST_API_URL
+  || process.env.REDIS_URL
+  || 'https://magnetic-werewolf-246021.upstash.io';
+const REDIS_TOKEN = process.env.UPSTASH_REDIS_REST_TOKEN
+  || process.env.KV_REST_API_TOKEN
+  || process.env.REDIS_TOKEN
+  || 'gQAAAAAAA8EFAAIgcDEyZTUyMjZlMTVlN2Y0YWI0YjA3YzVlOThiOWY3YTllMw';
 const SECRET      = process.env.WEBHOOK_SECRET;
 
 // ── Vercel config: MUST disable body parser to access raw bytes for HMAC ──────
