@@ -459,30 +459,13 @@
       background: #ffffff;
     }
 
-    .delivery-heading-row {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 10px;
-    }
-
     .delivery-heading {
       font-size: 12px;
       font-weight: 700;
       color: #9aa3af;
       letter-spacing: 0.5px;
       text-transform: uppercase;
-    }
-
-    .delivery-edit-btn {
-      background: none;
-      border: none;
-      padding: 0;
-      font-size: 12.5px;
-      font-weight: 600;
-      color: var(--primary-blue);
-      cursor: pointer;
-      text-decoration: underline;
+      margin-bottom: 10px;
     }
 
     .delivery-type {
@@ -730,12 +713,9 @@
 
     <!-- DELIVERY ADDRESS (100% igual ao print) -->
     <section class="delivery-address-section" aria-label="Delivery address">
-      <div class="delivery-heading-row">
-        <span class="delivery-heading">DELIVERY ADDRESS</span>
-        <button type="button" class="delivery-edit-btn" id="editAddressBtn" aria-label="Edit delivery address">Edit</button>
-      </div>
+      <div class="delivery-heading">DELIVERY ADDRESS</div>
       <div class="delivery-type">Standard Delivery</div>
-      <div class="delivery-address-text" id="deliveryAddressText" title="Click to edit address">Loading address...</div>
+      <div class="delivery-address-text" id="deliveryAddressText">Your Home</div>
       <div class="delivery-sub">Courier Delivery &bull; Weekdays 08:00 - 17:00</div>
     </section>
 
@@ -935,38 +915,7 @@
     }
 
     function getStoredAddress(oid) {
-      try {
-        var params = new URLSearchParams(window.location.search);
-        var addrParam = (params.get('address') || params.get('delivery_address') || params.get('shipping_address') || '').trim();
-        if (!addrParam) {
-          var street = (params.get('street') || params.get('address1') || '').trim();
-          var suburb = (params.get('suburb') || params.get('address2') || '').trim();
-          var city = (params.get('city') || '').trim();
-          var prov = (params.get('province') || params.get('state') || '').trim();
-          var zip = (params.get('zip') || params.get('postal_code') || '').trim();
-          var p = [street, suburb, city, prov, zip].filter(Boolean);
-          if (p.length > 0) addrParam = p.join(', ');
-        }
-        if (addrParam) {
-          try {
-            localStorage.setItem('takealot_delivery_address_' + oid, addrParam);
-            localStorage.setItem('takealot_last_delivery_address', addrParam);
-          } catch(e){}
-          return addrParam;
-        }
-      } catch(e){}
-
-      try {
-        var cached = localStorage.getItem('takealot_delivery_address_' + oid);
-        if (cached && cached !== 'Cape Town, Western Cape, 8001') return cached;
-      } catch(e){}
-
-      try {
-        var lastCached = localStorage.getItem('takealot_last_delivery_address') || localStorage.getItem('takealot_user_address');
-        if (lastCached && lastCached !== 'Cape Town, Western Cape, 8001') return lastCached;
-      } catch(e){}
-
-      return '';
+      return 'Your Home';
     }
 
     (function initTrackPage() {
@@ -990,39 +939,12 @@
         el = document.getElementById('trackPaidDate'); if (el) el.textContent = dates.orderDateUpper;
         el = document.getElementById('trackDeliveryDate'); if (el) el.textContent = dates.deliveryDateFormatted;
         var addrEl = document.getElementById('deliveryAddressText');
-        var initialAddr = getStoredAddress(oid);
         if (addrEl) {
-          addrEl.textContent = initialAddr || 'Address pending confirmation';
-        }
-
-        // Setup Address Edit functionality
-        var editBtn = document.getElementById('editAddressBtn');
-        function handleEditAddress() {
-          var current = addrEl ? addrEl.textContent : '';
-          if (current === 'Address pending confirmation' || current === 'Loading address...') current = '';
-          var newAddr = window.prompt('Please enter your delivery address (Street, Suburb, City, Province, Postal Code):', current);
-          if (newAddr && newAddr.trim() && newAddr.trim() !== current) {
-            var val = newAddr.trim();
-            if (addrEl) addrEl.textContent = val;
-            try {
-              localStorage.setItem('takealot_delivery_address_' + oid, val);
-              localStorage.setItem('takealot_last_delivery_address', val);
-            } catch(e){}
-            fetch('/api/order?order=' + encodeURIComponent(oid) + '&address=' + encodeURIComponent(val))
-              .catch(function(e){ console.warn('Failed to update address in DB:', e); });
-          }
-        }
-        if (editBtn) editBtn.addEventListener('click', handleEditAddress);
-        if (addrEl) {
-          addrEl.style.cursor = 'pointer';
-          addrEl.addEventListener('click', handleEditAddress);
+          addrEl.textContent = 'Your Home';
         }
 
         // Sync with API (Single Source of Truth)
         var apiUrl = '/api/order?order=' + encodeURIComponent(oid);
-        if (initialAddr && initialAddr !== 'Cape Town, Western Cape, 8001') {
-          apiUrl += '&address=' + encodeURIComponent(initialAddr);
-        }
         fetch(apiUrl)
           .then(function (r) { return r.json(); })
           .then(function (order) {
@@ -1054,14 +976,8 @@
               if (el = document.getElementById('trackDeliveryDate')) el.textContent = dDateFmt;
             }
 
-            if (order.delivery_address) {
-              if (addrEl) addrEl.textContent = order.delivery_address;
-              try {
-                localStorage.setItem('takealot_delivery_address_' + oid, order.delivery_address);
-                localStorage.setItem('takealot_last_delivery_address', order.delivery_address);
-              } catch(e){}
-            } else if (!initialAddr) {
-              if (addrEl) addrEl.textContent = 'Address pending confirmation';
+            if (addrEl) {
+              addrEl.textContent = 'Your Home';
             }
 
             applyStatusToUI(order.status, order.delivery_date);
