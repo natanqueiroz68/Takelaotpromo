@@ -353,11 +353,8 @@ async function handler(req, res) {
     return res.status(405).json({ error: 'Method Not Allowed' });
   }
 
-  // ── Step 1: fail closed if signing secret is not configured ─────────────────
-  if (!SECRET) {
-    console.error('[webhook] WEBHOOK_SECRET env var is not set');
-    return res.status(500).json({ error: 'Webhook not configured' });
-  }
+  // ── Step 1: verify signing secret if configured ─────────────────────────────
+  const cleanSecret = (SECRET || '').trim();
 
   // ── Step 2: read raw body BEFORE any parsing ─────────────────────────────────
   let rawBody;
@@ -368,69 +365,70 @@ async function handler(req, res) {
   }
 
   // ── Step 3: verify Paw House HMAC signature OR plain webhook secret ──────────
-  const cleanSecret = SECRET.trim();
-  let isValid = false;
+  let isValid = !cleanSecret; // If no secret is configured in Vercel env, accept incoming events
 
-  // Method 1: Plain secret token header (x-webhook-secret, x-secret, authorization Bearer, query secret)
-  const headerSecret = (req.headers['x-webhook-secret'] || req.headers['x-secret'] || req.headers['x-api-key'] || '').trim();
-  const authHeader = (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '').trim();
-  const querySecret = ((req.query && req.query.secret) || '').trim();
-  const directSecret = headerSecret || authHeader || querySecret;
+  if (cleanSecret) {
+    // Method 1: Plain secret token header (x-webhook-secret, x-secret, authorization Bearer, query secret)
+    const headerSecret = (req.headers['x-webhook-secret'] || req.headers['x-secret'] || req.headers['x-api-key'] || '').trim();
+    const authHeader = (req.headers['authorization'] || '').replace(/^Bearer\s+/i, '').trim();
+    const querySecret = ((req.query && req.query.secret) || '').trim();
+    const directSecret = headerSecret || authHeader || querySecret;
 
-  if (directSecret) {
-    try {
-      const a = Buffer.from(directSecret);
-      const b = Buffer.from(cleanSecret);
-      if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
-        isValid = true;
-      }
-    } catch {
-      isValid = false;
-    }
-  }
-
-  // Method 2: Paw House HMAC-SHA256 signature
-  if (!isValid) {
-    const headerKeys = [
-      'x-paw-royale-signature', 'x-pawroyale-signature', 'x-paw-house-signature',
-      'x-paw house-signature', 'x-pawhouse-signature', 'x-signature'
-    ];
-    let rawSig = '';
-    for (const k of headerKeys) {
-      if (req.headers[k]) {
-        rawSig = String(req.headers[k]).trim();
-        break;
+    if (directSecret) {
+      try {
+        const a = Buffer.from(directSecret);
+        const b = Buffer.from(cleanSecret);
+        if (a.length === b.length && crypto.timingSafeEqual(a, b)) {
+          isValid = true;
+        }
+      } catch {
+        isValid = false;
       }
     }
 
-    if (rawSig) {
-      const cleanSig = rawSig.replace(/^sha256[=:]/i, '').trim();
-
-      // Format A: Hexadecimal (64 hex characters -> 32 bytes)
-      if (/^[0-9a-fA-F]{64}$/.test(cleanSig)) {
-        try {
-          const expectedHex = crypto.createHmac('sha256', cleanSecret).update(rawBody).digest('hex');
-          const expectedBuf = Buffer.from(expectedHex, 'hex');
-          const receivedBuf = Buffer.from(cleanSig, 'hex');
-          if (expectedBuf.length === receivedBuf.length && crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
-            isValid = true;
-          }
-        } catch {
-          isValid = false;
+    // Method 2: Paw House HMAC-SHA256 signature
+    if (!isValid) {
+      const headerKeys = [
+        'x-paw-royale-signature', 'x-pawroyale-signature', 'x-paw-house-signature',
+        'x-paw house-signature', 'x-pawhouse-signature', 'x-signature'
+      ];
+      let rawSig = '';
+      for (const k of headerKeys) {
+        if (req.headers[k]) {
+          rawSig = String(req.headers[k]).trim();
+          break;
         }
       }
 
-      // Format B: Base64 (44 characters, ending with = or alphanumeric)
-      if (!isValid && /^[A-Za-z0-9+/]{43}=*$/.test(cleanSig)) {
-        try {
-          const expectedB64 = crypto.createHmac('sha256', cleanSecret).update(rawBody).digest('base64');
-          const expectedBuf = Buffer.from(expectedB64, 'utf8');
-          const receivedBuf = Buffer.from(cleanSig, 'utf8');
-          if (expectedBuf.length === receivedBuf.length && crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
-            isValid = true;
+      if (rawSig) {
+        const cleanSig = rawSig.replace(/^sha256[=:]/i, '').trim();
+
+        // Format A: Hexadecimal (64 hex characters -> 32 bytes)
+        if (/^[0-9a-fA-F]{64}$/.test(cleanSig)) {
+          try {
+            const expectedHex = crypto.createHmac('sha256', cleanSecret).update(rawBody).digest('hex');
+            const expectedBuf = Buffer.from(expectedHex, 'hex');
+            const receivedBuf = Buffer.from(cleanSig, 'hex');
+            if (expectedBuf.length === receivedBuf.length && crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
+              isValid = true;
+            }
+          } catch {
+            isValid = false;
           }
-        } catch {
-          isValid = false;
+        }
+
+        // Format B: Base64 (44 characters, ending with = or alphanumeric)
+        if (!isValid && /^[A-Za-z0-9+/]{43}=*$/.test(cleanSig)) {
+          try {
+            const expectedB64 = crypto.createHmac('sha256', cleanSecret).update(rawBody).digest('base64');
+            const expectedBuf = Buffer.from(expectedB64, 'utf8');
+            const receivedBuf = Buffer.from(cleanSig, 'utf8');
+            if (expectedBuf.length === receivedBuf.length && crypto.timingSafeEqual(expectedBuf, receivedBuf)) {
+              isValid = true;
+            }
+          } catch {
+            isValid = false;
+          }
         }
       }
     }
@@ -470,10 +468,18 @@ async function handler(req, res) {
     || null;
   if (!orderId) return res.status(400).json({ error: 'Missing orderId' });
 
+  // ── Step 6: check existing order in Redis early ──────────────────────────────
+  let existing = null;
+  try {
+    existing = await kv_get('order:' + orderId);
+  } catch (err) {
+    console.error('[webhook] Redis get error:', err.message);
+  }
+
   const cust          = payload.customer || payload.client || payload.buyer || (payload.data && payload.data.customer) || {};
-  const customerName  = cust.name || cust.fullName || cust.full_name || payload.name || payload.full_name || (cust.first_name ? `${cust.first_name} ${cust.last_name || ''}`.trim() : '') || '';
-  const customerEmail = cust.email || cust.customerEmail || cust.customer_email || payload.email || payload.customerEmail || payload.customer_email || (payload.data && payload.data.customer && payload.data.customer.email) || '';
-  const customerPhone = cust.phone || cust.phoneNumber || cust.phone_number || payload.phone || payload.phone_number || '';
+  const customerName  = cust.name || cust.fullName || cust.full_name || payload.name || payload.full_name || (cust.first_name ? `${cust.first_name} ${cust.last_name || ''}`.trim() : '') || (existing && existing.customer_name) || '';
+  const customerEmail = cust.email || cust.customerEmail || cust.customer_email || payload.email || payload.customerEmail || payload.customer_email || (payload.data && payload.data.customer && payload.data.customer.email) || (existing && existing.customer_email) || '';
+  const customerPhone = cust.phone || cust.phoneNumber || cust.phone_number || payload.phone || payload.phone_number || (existing && existing.customer_phone) || '';
 
   // Extract delivery address from all possible webhook formats
   const rawAddr = payload.shippingAddress
@@ -534,13 +540,6 @@ async function handler(req, res) {
   const now = new Date().toISOString();
 
   // ── Step 7: build order record & apply idempotency ───────────────────────────
-  let existing = null;
-  try {
-    existing = await kv_get('order:' + orderId);
-  } catch (err) {
-    console.error('[webhook] Redis get error:', err.message);
-  }
-
   let receivedAt = (existing && existing.received_date) || null;
   if (!receivedAt) {
     const rawCreated = payload.createdAt || payload.created_at || (payload.order && payload.order.createdAt) || (payload.data && payload.data.createdAt);
