@@ -11,8 +11,9 @@
     { "source": "/sucesso", "destination": "/sucess.html" },
     { "source": "/sucesso.html", "destination": "/sucess.html" },
     { "source": "/tracking", "destination": "/tracking.html" },
-    { "source": "/track", "destination": "/tracking.html" },
-    { "source": "/track.html", "destination": "/tracking.html" }
+    { "source": "/tracking.html", "destination": "/tracking.html" },
+    { "source": "/track", "destination": "/track.html" },
+    { "source": "/track.html", "destination": "/track.html" }
   ],
   "headers": [
     {

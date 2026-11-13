@@ -707,7 +707,10 @@
 
     <!-- ORDER & ESTIMATED DELIVERY CARD -->
     <section class="order-info-card" aria-label="Order summary status">
-      <div class="order-sub-number">Order <span id="trackingOrderId"></span></div>
+      <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px;">
+        <div class="order-sub-number">Order <span id="trackingOrderId"></span></div>
+        <a href="track.html" class="view-all-orders-link" id="viewOrderDetailsLink" style="font-size: 13px; font-weight: 600; color: #0b79bf; text-decoration: none;">Order Details &rarr;</a>
+      </div>
       <h2 class="collection-date-title" id="trackingDeliveryTitle">Estimated Delivery from <span id="trackingDeliveryDate">–</span></h2>
 
       <!-- NOTA PONTILHADA -->
