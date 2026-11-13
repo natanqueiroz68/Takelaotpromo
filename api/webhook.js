@@ -516,7 +516,7 @@ async function handler(req, res) {
 
   const deliveryAddress = formattedAddress
     || (existing && existing.delivery_address && existing.delivery_address !== 'Cape Town, Western Cape, 8001' ? existing.delivery_address : null)
-    || 'Your Home';
+    || 'Your Home - Your Address';
 
   const item         = Array.isArray(payload.items) ? payload.items[0] : {};
   const productId    = item.productId  || item.product_id

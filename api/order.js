@@ -238,7 +238,7 @@ function publicView(order) {
     order_date_formatted:    order.order_date_formatted || dates.order_date_formatted,
     delivery_date_formatted: order.delivery_date_formatted || dates.delivery_date_formatted,
     delivery_date_long:      order.delivery_date_long || dates.delivery_date_long,
-    delivery_address:        order.delivery_address || 'Your Home',
+    delivery_address:        order.delivery_address || 'Your Home - Your Address',
     tracking_url:            order.tracking_url || (`https://takelaotpromo.vercel.app/track.html?order=` + encodeURIComponent(order.order_id)),
     status:                  order.status || 'PROCESSING',
     status_history: (order.status_history || []).map(function(e) {

@@ -715,7 +715,7 @@
     <section class="delivery-address-section" aria-label="Delivery address">
       <div class="delivery-heading">DELIVERY ADDRESS</div>
       <div class="delivery-type">Standard Delivery</div>
-      <div class="delivery-address-text" id="deliveryAddressText">Your Home</div>
+      <div class="delivery-address-text" id="deliveryAddressText">Your Home - Your Address</div>
       <div class="delivery-sub">Courier Delivery &bull; Weekdays 08:00 - 17:00</div>
     </section>
 
@@ -915,7 +915,7 @@
     }
 
     function getStoredAddress(oid) {
-      return 'Your Home';
+      return 'Your Home - Your Address';
     }
 
     (function initTrackPage() {
@@ -940,7 +940,7 @@
         el = document.getElementById('trackDeliveryDate'); if (el) el.textContent = dates.deliveryDateFormatted;
         var addrEl = document.getElementById('deliveryAddressText');
         if (addrEl) {
-          addrEl.textContent = 'Your Home';
+          addrEl.textContent = 'Your Home - Your Address';
         }
 
         // Sync with API (Single Source of Truth)
@@ -977,7 +977,7 @@
             }
 
             if (addrEl) {
-              addrEl.textContent = 'Your Home';
+              addrEl.textContent = 'Your Home - Your Address';
             }
 
             applyStatusToUI(order.status, order.delivery_date);
