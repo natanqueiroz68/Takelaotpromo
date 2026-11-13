@@ -66,16 +66,14 @@
     :root {
       --primary-blue: #0b79bf;
       --takealot-blue: #0b6ecb;
-      --takealot-green: #1c853f;
+      --takealot-green: #16a34a;
       --text-dark: #111827;
       --text-main: #1f2937;
       --text-muted: #6b7280;
-      --text-subtle: #4b5563;
       --border-color: #e5e7eb;
-      --border-dashed: #d5d9df;
-      --bg-gray: #f2f2f4;
-      --divider-bg: #f2f2f4;
-      --badge-gray: #adadad;
+      --border-dashed: #d1d5db;
+      --bg-gray: #f2f4f7;
+      --badge-gray: #a3a3a3;
     }
 
     * {
@@ -89,17 +87,17 @@
     body {
       width: 100%;
       min-height: 100%;
-      background: #f2f2f4;
+      background: #f2f4f7;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
       color: var(--text-main);
       overflow-x: hidden;
       -webkit-font-smoothing: antialiased;
     }
 
-    /* CONTAINER PRINCIPAL MOBILE-FIRST (100% fiel ao layout Takealot App/Mobile) */
+    /* CONTAINER PRINCIPAL MOBILE-FIRST (100% idêntico ao Takealot) */
     .track-wrap {
       width: 100%;
-      max-width: 500px;
+      max-width: 480px;
       min-height: 100vh;
       margin: 0 auto;
       background: #ffffff;
@@ -107,7 +105,6 @@
       flex-direction: column;
       position: relative;
       box-shadow: 0 0 25px rgba(0, 0, 0, 0.05);
-      padding-bottom: max(32px, env(safe-area-inset-bottom, 20px));
     }
 
     /* ===== HEADER ===== */
@@ -120,7 +117,7 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      height: 54px;
+      height: 52px;
       padding: 0 16px;
     }
 
@@ -180,11 +177,10 @@
       padding: 0;
     }
 
-
-    /* ===== ORDER TITLE STRIP (Fundo cinza claro exatamente como no print: #f2f2f4) ===== */
+    /* ===== ORDER TITLE STRIP ===== */
     .order-title-strip {
-      padding: 13px 16px 12px;
-      background: #f2f2f4;
+      padding: 14px 16px 12px;
+      background: #f2f4f7;
       border-bottom: 1px solid var(--border-color);
     }
 
@@ -196,7 +192,7 @@
     }
 
     .order-number {
-      font-size: 15.5px;
+      font-size: 15px;
       font-weight: 700;
       color: #111827;
       letter-spacing: -0.2px;
@@ -222,9 +218,9 @@
       text-transform: uppercase;
     }
 
-    /* ===== ESTIMATED COLLECTION / STATUS / PRODUTO ===== */
+    /* ===== ESTIMATED DELIVERY / STATUS / PRODUTO ===== */
     .collection-section {
-      padding: 16px 16px 18px;
+      padding: 16px 16px 20px;
       background: #ffffff;
     }
 
@@ -234,7 +230,7 @@
       color: #111827;
       letter-spacing: -0.2px;
       margin-bottom: 8px;
-      line-height: 1.25;
+      line-height: 1.3;
     }
 
     .status-badge {
@@ -252,7 +248,7 @@
       margin-bottom: 14px;
     }
 
-    /* NOTE BOX (Caixa com borda pontilhada idêntica ao print) */
+    /* NOTE BOX */
     .note-box {
       border: 1px dashed var(--border-dashed);
       border-radius: 3px;
@@ -264,7 +260,7 @@
       margin-bottom: 16px;
     }
 
-    /* ITEM DO PRODUTO (100% fiel à imagem) */
+    /* ITEM DO PRODUTO */
     .product-row {
       display: flex;
       align-items: flex-start;
@@ -277,7 +273,7 @@
       height: 74px;
       flex-shrink: 0;
       border: 1px solid #e5e7eb;
-      border-radius: 3px;
+      border-radius: 4px;
       background: #ffffff;
       display: flex;
       align-items: center;
@@ -299,9 +295,15 @@
     .product-title {
       font-size: 14px;
       font-weight: 600;
-      color: #1f2937;
+      color: #111827;
       line-height: 1.35;
       margin-bottom: 3px;
+    }
+
+    .product-sub {
+      font-size: 12.5px;
+      color: #6b7280;
+      margin-bottom: 4px;
     }
 
     .product-price-line {
@@ -311,7 +313,7 @@
     }
 
     .product-price {
-      font-size: 14px;
+      font-size: 14.5px;
       font-weight: 700;
       color: #000000;
     }
@@ -333,175 +335,85 @@
       font-weight: 600;
     }
 
-    /* BOTÕES DE AÇÃO (Pills idênticas ao print) */
+    /* BOTÕES DE AÇÃO PILL (TRACK COM BORDA AZUL / CANCEL COM BORDA CINZA) */
     .actions-row {
       display: flex;
       align-items: center;
       gap: 12px;
-      margin-bottom: 16px;
     }
 
     .pill-btn {
-      width: 114px;
+      width: 115px;
       height: 38px;
       border-radius: 9999px;
-      border: 1px solid #d1d5db;
       background: #ffffff;
-      color: #374151;
       font-size: 13.5px;
       font-weight: 600;
       display: inline-flex;
       align-items: center;
       justify-content: center;
-      gap: 6px;
+      gap: 7px;
       cursor: pointer;
       text-decoration: none;
-      transition: background-color 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
-    }
-
-    .pill-btn:hover {
-      background: #f9fafb;
-      border-color: #9ca3af;
-    }
-
-    .pill-btn-primary {
-      background: #0b79bf;
-      color: #ffffff;
-      border-color: #0b79bf;
-    }
-
-    .pill-btn-primary:hover {
-      background: #0959a5;
-      border-color: #0959a5;
-      color: #ffffff;
-    }
-
-    .pill-btn-primary svg {
-      color: #ffffff !important;
-      stroke: #ffffff !important;
+      transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
     }
 
     .pill-btn:active {
       transform: scale(0.98);
     }
 
-    .pill-btn svg {
+    .pill-btn-track {
+      border: 1.5px solid var(--primary-blue);
+      color: var(--primary-blue);
+    }
+
+    .pill-btn-track:hover {
+      background: #f0f7ff;
+    }
+
+    .pill-btn-track svg {
+      width: 16px;
+      height: 16px;
+      color: var(--primary-blue);
+      stroke: var(--primary-blue);
+      flex-shrink: 0;
+    }
+
+    .pill-btn-cancel {
+      border: 1px solid #d1d5db;
+      color: #374151;
+    }
+
+    .pill-btn-cancel:hover {
+      background: #f9fafb;
+      border-color: #9ca3af;
+    }
+
+    .pill-btn-cancel svg {
       width: 16px;
       height: 16px;
       color: #374151;
+      stroke: #374151;
       flex-shrink: 0;
     }
 
-    /* TIMELINE DE RASTREIO INTEGRADA NA PÁGINA */
-    .timeline-drawer {
-      display: block;
-      margin-top: 14px;
-      padding: 16px;
-      border: 1px solid #e5e7eb;
-      border-radius: 6px;
-      background: #f9fafb;
-    }
-
-    .timeline-drawer-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 12px;
-      font-size: 12px;
-      font-weight: 700;
-      color: #4b5563;
-      text-transform: uppercase;
-      letter-spacing: 0.4px;
-    }
-
-    .timeline-live-link {
-      font-size: 12.5px;
-      font-weight: 600;
-      color: #0b79bf;
-      text-decoration: none;
-    }
-
-    .timeline-live-link:hover {
-      text-decoration: underline;
-    }
-
-    .timeline-step {
-      display: flex;
-      gap: 12px;
-      position: relative;
-      padding-bottom: 16px;
-    }
-
-    .timeline-step:last-child {
-      padding-bottom: 0;
-    }
-
-    .timeline-step::before {
-      content: "";
-      position: absolute;
-      left: 9px;
-      top: 20px;
-      bottom: 0;
-      width: 2px;
-      background: #e2e8f0;
-    }
-
-    .timeline-step:last-child::before {
-      display: none;
-    }
-
-    .timeline-dot {
-      width: 20px;
-      height: 20px;
-      border-radius: 50%;
-      background: #9ca3af;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: #fff;
-      font-size: 10px;
-      font-weight: 700;
-      flex-shrink: 0;
-      z-index: 2;
-    }
-
-    .timeline-step.active .timeline-dot {
-      background: var(--takealot-green);
-    }
-
-    .timeline-info {
-      flex: 1;
-    }
-
-    .timeline-title {
-      font-size: 13px;
-      font-weight: 700;
-      color: #1f2937;
-    }
-
-    .timeline-date {
-      font-size: 11.5px;
-      color: #6b7280;
-      margin-top: 2px;
-    }
-
-    /* ===== FAIXA DIVISÓRIA CINZA (8px exatamente como no print Takealot) ===== */
+    /* ===== FAIXA DIVISÓRIA CINZA DE SEÇÃO ===== */
     .section-divider {
       height: 8px;
-      background: var(--divider-bg);
+      background: #f2f4f7;
       border-top: 1px solid var(--border-color);
       border-bottom: 1px solid var(--border-color);
       width: 100%;
     }
 
-    /* ===== ORDER SUMMARY (100% igual ao print) ===== */
+    /* ===== ORDER SUMMARY ===== */
     .summary-section {
       padding: 18px 16px 20px;
       background: #ffffff;
     }
 
     .summary-heading {
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 700;
       color: #9aa3af;
       letter-spacing: 0.5px;
@@ -520,7 +432,7 @@
 
     .summary-row.total-row {
       margin-top: 14px;
-      font-weight: 500;
+      font-weight: 600;
       color: #111827;
       font-size: 14.5px;
     }
@@ -529,7 +441,6 @@
       color: #111827;
       font-weight: 500;
       font-size: 14px;
-      margin-bottom: 18px;
     }
 
     .summary-row .val {
@@ -537,50 +448,82 @@
       color: #000000;
     }
 
-    .summary-dashed-line {
-      border-top: 1px dashed var(--border-dashed);
-      margin: 18px 0 16px;
+    .summary-row .val-free {
+      color: var(--takealot-green) !important;
+      font-weight: 700;
     }
 
-    /* ===== PICKUP POINT ===== */
-    .pickup-section {
+    /* ===== DELIVERY ADDRESS ===== */
+    .delivery-address-section {
+      padding: 18px 16px 24px;
       background: #ffffff;
     }
 
-    .pickup-heading {
-      font-size: 12.5px;
+    .delivery-heading {
+      font-size: 12px;
       font-weight: 700;
       color: #9aa3af;
       letter-spacing: 0.5px;
       text-transform: uppercase;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
 
-    .pickup-name {
-      font-size: 14px;
+    .delivery-type {
+      font-size: 14.5px;
       font-weight: 700;
-      color: #1f2937;
+      color: #111827;
       margin-bottom: 3px;
     }
 
-    .pickup-address {
-      font-size: 13px;
-      color: #6b7280;
+    .delivery-address-text {
+      font-size: 13.5px;
+      color: #4b5563;
       line-height: 1.4;
       margin-bottom: 4px;
     }
 
-    .pickup-hours {
-      font-size: 12px;
+    .delivery-sub {
+      font-size: 12.5px;
       color: #9ca3af;
+    }
+
+    /* ===== NEED HELP BOTTOM LINK ===== */
+    .help-section {
+      padding: 22px 16px 36px;
+      background: #ffffff;
+      text-align: center;
+      border-top: 1px solid #f2f4f7;
+    }
+
+    .need-help-link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      font-size: 14.5px;
+      font-weight: 700;
+      color: var(--primary-blue);
+      text-decoration: none;
+    }
+
+    .need-help-link:hover {
+      text-decoration: underline;
+    }
+
+    .need-help-link svg {
+      width: 18px;
+      height: 18px;
+      stroke: var(--primary-blue);
+      fill: none;
+      stroke-width: 2;
     }
 
     /* RESPONSIVIDADE PARA TELAS MENORES (320px..360px) */
     @media (max-width: 360px) {
-
       .order-title-strip,
       .collection-section,
-      .summary-section {
+      .summary-section,
+      .delivery-address-section {
         padding-left: 12px;
         padding-right: 12px;
       }
@@ -674,7 +617,7 @@
       </div>
     </div>
 
-    <!-- ESTIMATED DELIVERY & PRODUCT INFO -->
+    <!-- ESTIMATED DELIVERY & PRODUCT INFO (Exatamente como no print) -->
     <div class="collection-section">
       <h2 class="collection-title" id="trackCollectionTitle">Estimated Delivery from <span id="trackDeliveryDate">–</span></h2>
       <div class="status-badge" id="trackStatusBadge">NOT YET READY</div>
@@ -696,21 +639,24 @@
             JBL PartyBox 520 Portable Battery-Powered Party Speaker - Black With 2 JBL Wireless Microphones
           </div>
 
+          <div class="product-sub" id="trackProductSub">
+            Black &bull; Model PartyBox 520 &bull; PLID99557276
+          </div>
+
           <div class="product-price-line">
             <span class="product-price" id="trackProductPrice">R 799</span>
             <span class="product-qty">Qty: 1</span>
           </div>
 
           <div class="product-seller">
-            Sold by <strong>Takealot Deals</strong>
+            Sold by <strong>Takealot</strong>
           </div>
         </div>
       </div>
 
-
-      <!-- BOTÕES DE AÇÃO PILL (TRACK / CANCEL) -->
+      <!-- BOTÕES DE AÇÃO PILL: TRACK (BORDA AZUL) / CANCEL (BORDA CINZA) -->
       <div class="actions-row">
-        <a href="tracking.html" class="pill-btn pill-btn-primary" id="trackDetailsBtn">
+        <a href="tracking.html" class="pill-btn pill-btn-track" id="trackDetailsBtn">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
             stroke-linejoin="round">
             <circle cx="12" cy="12" r="7"></circle>
@@ -722,7 +668,7 @@
           <span>Track</span>
         </a>
 
-        <button class="pill-btn" type="button" onclick="alert('Order cancellation request has been submitted.')">
+        <button class="pill-btn pill-btn-cancel" type="button" onclick="alert('Order cancellation request has been submitted.')">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
             stroke-linejoin="round">
             <circle cx="12" cy="12" r="9"></circle>
@@ -732,49 +678,9 @@
           <span>Cancel</span>
         </button>
       </div>
-
-      <!-- TIMELINE DE RASTREIO EXPANSÍVEL / INTEGRADA -->
-      <div class="timeline-drawer" id="timelineDrawer">
-        <div class="timeline-drawer-header">
-          <span>Order Progress</span>
-          <a href="tracking.html" class="timeline-live-link" id="timelineLiveLink">Live Map &amp; Tracking &rarr;</a>
-        </div>
-
-        <div class="timeline-step active">
-          <div class="timeline-dot">✓</div>
-          <div class="timeline-info">
-            <div class="timeline-title">Order Placed &amp; Paid</div>
-            <div class="timeline-date" id="tlOrderPlaced">–</div>
-          </div>
-        </div>
-
-        <div class="timeline-step active">
-          <div class="timeline-dot">✓</div>
-          <div class="timeline-info">
-            <div class="timeline-title">Payment Confirmed</div>
-            <div class="timeline-date">Credit / Debit Card</div>
-          </div>
-        </div>
-
-        <div class="timeline-step" id="tlStepPacking">
-          <div class="timeline-dot" id="tlDotPacking">3</div>
-          <div class="timeline-info">
-            <div class="timeline-title">Packing at Warehouse</div>
-            <div class="timeline-date" id="tlPacking">–</div>
-          </div>
-        </div>
-
-        <div class="timeline-step" id="tlStepOutDelivery">
-          <div class="timeline-dot" id="tlDotDelivery">4</div>
-          <div class="timeline-info">
-            <div class="timeline-title">Out for Delivery</div>
-            <div class="timeline-date" id="tlOutDelivery">–</div>
-          </div>
-        </div>
-      </div>
     </div>
 
-    <!-- FAIXA DIVISÓRIA CINZA DE SEÇÃO -->
+    <!-- FAIXA DIVISÓRIA CINZA DE SEÇÃO (8px) -->
     <div class="section-divider"></div>
 
     <!-- ORDER SUMMARY (100% igual ao print) -->
@@ -788,7 +694,7 @@
 
       <div class="summary-row">
         <span>Delivery</span>
-        <span class="val" id="summaryDeliveryPrice">FREE</span>
+        <span class="val val-free" id="summaryDeliveryPrice">FREE</span>
       </div>
 
       <div class="summary-row total-row">
@@ -800,17 +706,30 @@
         <span>Paid (Credit / Debit Card)</span>
         <span class="val" id="summaryPaidPrice">-R 799</span>
       </div>
-
-      <div class="summary-dashed-line"></div>
-
-      <!-- TAKEALOT PICKUP POINT -->
-      <div class="pickup-section">
-        <div class="pickup-heading">TAKEALOT PICKUP POINT</div>
-        <div class="pickup-name">Takealot Pickup Point - Richmond Park</div>
-        <div class="pickup-address">Richmond Park, Cape Town, 7441</div>
-        <div class="pickup-hours">Mon - Fri: 08:00 - 18:00 &bull; Sat - Sun: 08:00 - 17:00</div>
-      </div>
     </section>
+
+    <!-- FAIXA DIVISÓRIA CINZA DE SEÇÃO (8px) -->
+    <div class="section-divider"></div>
+
+    <!-- DELIVERY ADDRESS (100% igual ao print) -->
+    <section class="delivery-address-section" aria-label="Delivery address">
+      <div class="delivery-heading">DELIVERY ADDRESS</div>
+      <div class="delivery-type">Standard Delivery</div>
+      <div class="delivery-address-text" id="deliveryAddressText">Cape Town, Western Cape, 8001</div>
+      <div class="delivery-sub">Courier Delivery &bull; Weekdays 08:00 - 17:00</div>
+    </section>
+
+    <!-- NEED HELP BOTTOM LINK -->
+    <div class="help-section">
+      <a href="https://takelaotpromo.vercel.app" class="need-help-link">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+          <circle cx="12" cy="10" r="1"></circle>
+          <path d="M12 7a1.5 1.5 0 0 1 1.5 1.5c0 1-1.5 1.5-1.5 2"></path>
+        </svg>
+        <span>Need Help?</span>
+      </a>
+    </div>
 
   </div>
 
@@ -921,10 +840,6 @@
       if (trackDetailsBtn) {
         trackDetailsBtn.href = 'tracking.html?order=' + encodeURIComponent(oid);
       }
-      var timelineLiveLink = document.getElementById('timelineLiveLink');
-      if (timelineLiveLink) {
-        timelineLiveLink.href = 'tracking.html?order=' + encodeURIComponent(oid);
-      }
       var links = document.querySelectorAll('a[href*="sucess.html"], a[href*="sucesso.html"], a[href*="tracking.html"], a[href*="track.html"]');
       for (var i = 0; i < links.length; i++) {
         try {
@@ -935,12 +850,8 @@
       }
     }
 
-    // ---- Status -> timeline mapping ----
-    function applyStatusToTimeline(status, deliveryDate) {
-      var packStep = document.getElementById('tlStepPacking');
-      var delivStep = document.getElementById('tlStepOutDelivery');
-      var dotPacking = document.getElementById('tlDotPacking');
-      var dotDeliv = document.getElementById('tlDotDelivery');
+    // ---- Status -> UI mapping ----
+    function applyStatusToUI(status, deliveryDate) {
       var badge = document.getElementById('trackStatusBadge');
       var collectionTitle = document.getElementById('trackCollectionTitle');
 
@@ -950,10 +861,8 @@
         return;
       }
 
-      if (status === 'IN_TRANSIT' || status === 'OUT_FOR_DELIVERY' || status === 'DELIVERED') {
-        if (packStep) packStep.classList.add('active');
-        if (dotPacking) dotPacking.textContent = '✓';
-        if (badge && status !== 'DELIVERED') {
+      if (status === 'IN_TRANSIT' || status === 'OUT_FOR_DELIVERY') {
+        if (badge) {
           badge.textContent = status === 'OUT_FOR_DELIVERY' ? 'OUT FOR DELIVERY' : 'IN TRANSIT';
           badge.style.background = '#0b79bf';
           badge.style.color = '#fff';
@@ -961,8 +870,6 @@
       }
 
       if (status === 'DELIVERED') {
-        if (delivStep) delivStep.classList.add('active');
-        if (dotDeliv) dotDeliv.textContent = '✓';
         if (badge) {
           badge.textContent = 'DELIVERED';
           badge.style.background = '#16a34a';
@@ -999,13 +906,10 @@
         } catch(e){}
       }
 
-      var packDate = new Date(purchaseDate.getTime() + 4 * 86400000);
-
       return {
         orderDateUpper: fmtShortUpper(purchaseDate),
         orderDateFormatted: fmt(purchaseDate),
         deliveryDateFormatted: fmt(deliveryDate),
-        packDateFormatted: 'Expected ' + fmt(packDate),
         deliveryDateObj: deliveryDate
       };
     }
@@ -1030,9 +934,6 @@
         el = document.getElementById('trackOrderedDate'); if (el) el.textContent = dates.orderDateUpper;
         el = document.getElementById('trackPaidDate'); if (el) el.textContent = dates.orderDateUpper;
         el = document.getElementById('trackDeliveryDate'); if (el) el.textContent = dates.deliveryDateFormatted;
-        el = document.getElementById('tlOrderPlaced'); if (el) el.textContent = dates.orderDateFormatted;
-        el = document.getElementById('tlPacking'); if (el) el.textContent = dates.packDateFormatted;
-        el = document.getElementById('tlOutDelivery'); if (el) el.textContent = 'Expected ' + dates.deliveryDateFormatted;
 
         // Sync with API (Single Source of Truth)
         var apiUrl = '/api/order?order=' + encodeURIComponent(oid);
@@ -1056,29 +957,18 @@
             }
 
             var oDateUpper = order.order_date_upper || fmtShortUpper(order.received_date);
-            var oDateFmt = order.order_date_formatted || fmt(order.received_date);
             var dDateFmt = order.delivery_date_formatted || fmt(order.delivery_date);
 
             if (oDateUpper) {
               if (el = document.getElementById('trackOrderedDate')) el.textContent = oDateUpper;
               if (el = document.getElementById('trackPaidDate')) el.textContent = oDateUpper;
             }
-            if (oDateFmt) {
-              if (el = document.getElementById('tlOrderPlaced')) el.textContent = oDateFmt;
-            }
 
             if (dDateFmt) {
               if (el = document.getElementById('trackDeliveryDate')) el.textContent = dDateFmt;
-              if (el = document.getElementById('tlOutDelivery')) el.textContent = 'Expected ' + dDateFmt;
             }
 
-            if (order.received_date) {
-              var rDate = new Date(order.received_date);
-              var packDate = new Date(rDate.getTime() + 4 * 86400000);
-              if (el = document.getElementById('tlPacking')) el.textContent = 'Expected ' + fmt(packDate);
-            }
-
-            applyStatusToTimeline(order.status, order.delivery_date);
+            applyStatusToUI(order.status, order.delivery_date);
           })
           .catch(function (err) {
             console.warn('[track] API sync warning:', err);
