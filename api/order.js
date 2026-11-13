@@ -238,6 +238,7 @@ function publicView(order) {
     order_date_formatted:    order.order_date_formatted || dates.order_date_formatted,
     delivery_date_formatted: order.delivery_date_formatted || dates.delivery_date_formatted,
     delivery_date_long:      order.delivery_date_long || dates.delivery_date_long,
+    delivery_address:        order.delivery_address || 'Cape Town, Western Cape, 8001',
     tracking_url:            order.tracking_url || (`https://takelaotpromo.vercel.app/track.html?order=` + encodeURIComponent(order.order_id)),
     status:                  order.status || 'PROCESSING',
     status_history: (order.status_history || []).map(function(e) {
@@ -408,6 +409,14 @@ module.exports = async function handler(req, res) {
   if (overrideEmail && overrideEmail.includes('@')) {
     order.customer_email = overrideEmail;
     if (req.query.name) order.customer_name = req.query.name.trim();
+    if (REDIS_URL && REDIS_TOKEN && order.order_id) {
+      try { await kv_set('order:' + order.order_id, order); } catch (_) {}
+    }
+  }
+
+  const overrideAddress = (req.query.address || req.query.delivery_address || req.query.shipping_address || '').trim();
+  if (overrideAddress && order) {
+    order.delivery_address = overrideAddress;
     if (REDIS_URL && REDIS_TOKEN && order.order_id) {
       try { await kv_set('order:' + order.order_id, order); } catch (_) {}
     }

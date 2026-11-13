@@ -475,6 +475,43 @@ async function handler(req, res) {
   const customerEmail = cust.email || cust.customerEmail || cust.customer_email || payload.email || payload.customerEmail || payload.customer_email || (payload.data && payload.data.customer && payload.data.customer.email) || '';
   const customerPhone = cust.phone || cust.phoneNumber || cust.phone_number || payload.phone || payload.phone_number || '';
 
+  // Extract delivery address from all possible webhook formats
+  const rawAddr = payload.shippingAddress
+    || payload.shipping_address
+    || payload.deliveryAddress
+    || payload.delivery_address
+    || payload.address
+    || (cust && (cust.shippingAddress || cust.shipping_address || cust.deliveryAddress || cust.delivery_address || cust.address))
+    || (payload.data && (payload.data.shipping_address || payload.data.delivery_address || payload.data.address || (payload.data.customer && (payload.data.customer.shipping_address || payload.data.customer.address))))
+    || {};
+
+  let formattedAddress = '';
+  if (typeof rawAddr === 'string' && rawAddr.trim()) {
+    formattedAddress = rawAddr.trim();
+  } else if (typeof rawAddr === 'object' && rawAddr !== null) {
+    const street = rawAddr.street || rawAddr.streetAddress || rawAddr.street_address || rawAddr.address1 || rawAddr.line1 || rawAddr.address || '';
+    const suburb = rawAddr.suburb || rawAddr.address2 || rawAddr.line2 || rawAddr.neighborhood || rawAddr.district || '';
+    const city = rawAddr.city || rawAddr.town || '';
+    const province = rawAddr.province || rawAddr.state || rawAddr.region || '';
+    const postalCode = rawAddr.postalCode || rawAddr.postal_code || rawAddr.zip || rawAddr.zipCode || rawAddr.zip_code || '';
+    const parts = [street, suburb, city, province, postalCode].map(s => String(s || '').trim()).filter(Boolean);
+    if (parts.length > 0) formattedAddress = parts.join(', ');
+  }
+
+  if (!formattedAddress) {
+    const street = payload.street || payload.streetAddress || payload.address1 || payload.line1 || cust.street || '';
+    const suburb = payload.suburb || payload.address2 || payload.line2 || cust.suburb || '';
+    const city = payload.city || cust.city || '';
+    const province = payload.province || payload.state || cust.province || cust.state || '';
+    const postalCode = payload.postalCode || payload.postal_code || payload.zip || cust.postalCode || cust.postal_code || '';
+    const parts = [street, suburb, city, province, postalCode].map(s => String(s || '').trim()).filter(Boolean);
+    if (parts.length > 0) formattedAddress = parts.join(', ');
+  }
+
+  const deliveryAddress = formattedAddress
+    || (existing && existing.delivery_address)
+    || 'Cape Town, Western Cape, 8001';
+
   const item         = Array.isArray(payload.items) ? payload.items[0] : {};
   const productId    = item.productId  || item.product_id
                     || (payload.product && payload.product.id)
@@ -529,6 +566,7 @@ async function handler(req, res) {
     product_price:  productPrice,
     currency,
     product_image:  productImage,
+    delivery_address: deliveryAddress,
     // Dates (immutable once created, strictly Africa/Johannesburg)
     received_date:           receivedAt,
     delivery_date:           deliveredAt,

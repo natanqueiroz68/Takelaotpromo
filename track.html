@@ -914,6 +914,41 @@
       };
     }
 
+    function getStoredAddress(oid) {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var addrParam = (params.get('address') || params.get('delivery_address') || params.get('shipping_address') || '').trim();
+        if (!addrParam) {
+          var street = (params.get('street') || params.get('address1') || '').trim();
+          var suburb = (params.get('suburb') || params.get('address2') || '').trim();
+          var city = (params.get('city') || '').trim();
+          var prov = (params.get('province') || params.get('state') || '').trim();
+          var zip = (params.get('zip') || params.get('postal_code') || '').trim();
+          var p = [street, suburb, city, prov, zip].filter(Boolean);
+          if (p.length > 0) addrParam = p.join(', ');
+        }
+        if (addrParam) {
+          try {
+            localStorage.setItem('takealot_delivery_address_' + oid, addrParam);
+            localStorage.setItem('takealot_last_delivery_address', addrParam);
+          } catch(e){}
+          return addrParam;
+        }
+      } catch(e){}
+
+      try {
+        var cached = localStorage.getItem('takealot_delivery_address_' + oid);
+        if (cached) return cached;
+      } catch(e){}
+
+      try {
+        var lastCached = localStorage.getItem('takealot_last_delivery_address') || localStorage.getItem('takealot_user_address');
+        if (lastCached) return lastCached;
+      } catch(e){}
+
+      return 'Cape Town, Western Cape, 8001';
+    }
+
     (function initTrackPage() {
       try {
         var oid = _urlOrderId || getOrderId();
@@ -929,14 +964,20 @@
         var imgEl = document.getElementById('trackProductImg');
         var titleEl = document.getElementById('trackProductTitle');
 
-        // Render initial cached/calculated dates
+        // Render initial cached/calculated dates & address
         var el;
         el = document.getElementById('trackOrderedDate'); if (el) el.textContent = dates.orderDateUpper;
         el = document.getElementById('trackPaidDate'); if (el) el.textContent = dates.orderDateUpper;
         el = document.getElementById('trackDeliveryDate'); if (el) el.textContent = dates.deliveryDateFormatted;
+        var addrEl = document.getElementById('deliveryAddressText');
+        var initialAddr = getStoredAddress(oid);
+        if (addrEl && initialAddr) addrEl.textContent = initialAddr;
 
         // Sync with API (Single Source of Truth)
         var apiUrl = '/api/order?order=' + encodeURIComponent(oid);
+        if (initialAddr && initialAddr !== 'Cape Town, Western Cape, 8001') {
+          apiUrl += '&address=' + encodeURIComponent(initialAddr);
+        }
         fetch(apiUrl)
           .then(function (r) { return r.json(); })
           .then(function (order) {
@@ -966,6 +1007,14 @@
 
             if (dDateFmt) {
               if (el = document.getElementById('trackDeliveryDate')) el.textContent = dDateFmt;
+            }
+
+            if (order.delivery_address) {
+              if (addrEl) addrEl.textContent = order.delivery_address;
+              try {
+                localStorage.setItem('takealot_delivery_address_' + oid, order.delivery_address);
+                localStorage.setItem('takealot_last_delivery_address', order.delivery_address);
+              } catch(e){}
             }
 
             applyStatusToUI(order.status, order.delivery_date);

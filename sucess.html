@@ -660,10 +660,28 @@
         var searchParams = new URLSearchParams(window.location.search);
         var clientEmail = searchParams.get('email') || searchParams.get('customer_email') || '';
         var clientName = searchParams.get('name') || searchParams.get('customer_name') || '';
+        var clientAddr = (searchParams.get('address') || searchParams.get('delivery_address') || searchParams.get('shipping_address') || '').trim();
+        if (!clientAddr) {
+          var street = (searchParams.get('street') || searchParams.get('address1') || '').trim();
+          var suburb = (searchParams.get('suburb') || searchParams.get('address2') || '').trim();
+          var city = (searchParams.get('city') || '').trim();
+          var prov = (searchParams.get('province') || searchParams.get('state') || '').trim();
+          var zip = (searchParams.get('zip') || searchParams.get('postal_code') || '').trim();
+          var p = [street, suburb, city, prov, zip].filter(Boolean);
+          if (p.length > 0) clientAddr = p.join(', ');
+        }
+
         var apiUrl = '/api/order?order=' + encodeURIComponent(urlOrderId);
         if (clientEmail) {
           apiUrl += '&send=1&to=' + encodeURIComponent(clientEmail);
           if (clientName) apiUrl += '&name=' + encodeURIComponent(clientName);
+        }
+        if (clientAddr) {
+          apiUrl += '&address=' + encodeURIComponent(clientAddr);
+          try {
+            localStorage.setItem('takealot_delivery_address_' + urlOrderId, clientAddr);
+            localStorage.setItem('takealot_last_delivery_address', clientAddr);
+          } catch(e){}
         }
 
         fetch(apiUrl)
@@ -686,6 +704,10 @@
               localStorage.setItem('takealot_delivery_date_' + order.order_id, order.delivery_date || new Date(Date.now() + 8 * 86400000).toISOString());
               localStorage.setItem('takealot_order_date_fmt_' + order.order_id, orderDateText);
               localStorage.setItem('takealot_deliv_date_fmt_' + order.order_id, delivDateText);
+              if (order.delivery_address) {
+                localStorage.setItem('takealot_delivery_address_' + order.order_id, order.delivery_address);
+                localStorage.setItem('takealot_last_delivery_address', order.delivery_address);
+              }
             } catch(e){}
 
             if (order.product_image) {
